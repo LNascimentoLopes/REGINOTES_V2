@@ -25,8 +25,8 @@ CREATE TABLE app_users (
     avatar_url varchar(500) ,
     is_active boolean default true,
     email_verified_at timestamp ,
-    created_at timestamp default Now(),
-    updated_at timestamp
+    created_at timestamp not null default now(),
+    updated_at timestamp not null default now()
 
 );
 --WORKSPACES
@@ -38,8 +38,8 @@ CREATE TABLE workspaces (
     parent_id UUID references workspaces(id) ON DELETE SET NULL,
     icon_url varchar(500) ,
     settings jsonb ,
-    created_at timestamp default now(),
-    updated_at timestamp default now(),
+    created_at timestamp not null default now(),
+    updated_at timestamp not null default now(),
     deleted_at timestamp
 );
 --REFRESH TOKENS
@@ -66,9 +66,9 @@ CREATE TABLE notifications(
 --NOTES
 CREATE TABLE notes(
     id uuid primary key default gen_random_uuid(),
-    workspace_id uuid references workspaces(id),
-    owner_id uuid not null references app_users(id) ON DELETE CASCADE,
-    parent_id uuid not null references workspaces(id) ON DELETE CASCADE,
+    workspace_id uuid not null references workspaces(id),
+    owner_id uuid not null references app_users(id) ON DELETE RESTRICT,
+    parent_id uuid references notes(id) ON DELETE CASCADE,
     title varchar not null default 'Empty Title',
     content jsonb not null default '{}',
     version integer not null default 1,
@@ -83,10 +83,10 @@ CREATE TABLE notes(
 CREATE TABLE attachments(
     id uuid primary key default gen_random_uuid(),
     note_id uuid not null references notes(id) ON DELETE CASCADE,
-    uploaded_by uuid not null references app_users(id) ON DELETE CASCADE,
+    uploaded_by uuid references app_users(id) ON DELETE SET NULL,
     filename varchar(255) not null,
     mime_type varchar(100) not null,
-    size_bytes BIGINT not null default 1,
+    size_bytes BIGINT not null,
     storage_key varchar(500) not null unique,
     created_at timestamp not null default now()
 );
@@ -94,8 +94,9 @@ CREATE TABLE attachments(
 CREATE TABLE note_versions(
     id uuid primary key default gen_random_uuid(),
     note_id uuid not null references notes(id) ON DELETE CASCADE,
-    content jsonb default '{}',
-    saved_by uuid not null references app_users(id) ON DELETE RESTRICT,
+    content jsonb not null default '{}',
+    version INTEGER not null default 1,
+    saved_by uuid references app_users(id) ON DELETE SET NULL ,
     created_at timestamp default now()
 );
 --TAGS
@@ -109,25 +110,29 @@ CREATE TABLE tags (
 --NOTE_TAG RELATION
 CREATE TABLE note_tags(
     note_id uuid not null references notes(id) ON DELETE CASCADE,
-    tag_id uuid not null references tags(id) ON DELETE CASCADE
+    tag_id uuid not null  references tags(id) ON DELETE CASCADE,
+    primary key (note_id,tag_id)
+
+
 );
 --NOTE COLLAB
 CREATE TABLE note_collaborators(
     id uuid primary key default gen_random_uuid(),
-    note_id uuid not null references notes(id) ON DELETE CASCADE,
-    user_id uuid not null references app_users(id) ON DELETE CASCADE,
-    invited_by uuid not null references app_users(id) ON DELETE CASCADE,
-    role note_role default 'VIEWER',
+    note_id uuid not null  unique references notes(id) ON DELETE CASCADE,
+    user_id uuid not null  unique references app_users(id) ON DELETE CASCADE,
+    invited_by uuid references app_users(id) ON DELETE SET NULL,
+    role note_role not null default 'VIEWER',
     added_at timestamp not null default now()
 );
 --WORKSPACE COLLAB
 CREATE TABLE workspace_members(
     id uuid primary key default gen_random_uuid(),
-    workspace_id uuid not null references workspaces(id) ON DELETE CASCADE,
-    user_id uuid not null references app_users(id) ON DELETE CASCADE,
-    invited_by uuid not null references app_users(id) ON DELETE SET NULL ,
+    workspace_id uuid not null unique references workspaces(id) ON DELETE CASCADE,
+    user_id uuid not null unique references app_users(id) ON DELETE CASCADE,
+    invited_by uuid references app_users(id) ON DELETE SET NULL ,
     role workspace_role not null default 'VIEWER',
     joined_at timestamp  not null default now()
+
 );
 
 --INDEXES
@@ -155,7 +160,7 @@ CREATE INDEX idx_notes_workspace_id   ON notes(workspace_id);
 CREATE INDEX idx_notes_owner_id       ON notes(owner_id);
 CREATE INDEX idx_notes_parent_id      ON notes(parent_id);
 CREATE INDEX idx_notes_deleted_at     ON notes(deleted_at) WHERE deleted_at IS NULL;
-CREATE INDEX idx_notes_search_status  ON notes(search_status) WHERE search_status = 'pending';
+CREATE INDEX idx_notes_search_status  ON notes(search_status) WHERE search_status = 'PENDING';
 CREATE INDEX idx_notes_is_pinned      ON notes(workspace_id, is_pinned) WHERE is_pinned = TRUE;
 
 -- note_collaborators

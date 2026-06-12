@@ -1,4 +1,4 @@
 package LNASC.REGINOTES.Util;
 
-public class Slugutil {
+public class SlugUtil {
 }

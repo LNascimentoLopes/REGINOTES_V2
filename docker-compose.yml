@@ -1,0 +1,45 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: reginotes_postgres
+    environment:
+      POSTGRES_DB: reginotes
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7
+    container_name: reginotes_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: reginotes_rabbimq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+  app:
+    build: .
+    container_name: reginotes_app
+    environment:
+      SPRING_DATASOURCE_URL: ${POSTGRES_URL}
+    depends_on:
+      - postgres
+      - redis
+      - rabbitmq
+volumes:
+  postgres_data:
+  redis_data:
+  rabbitmq_data:
