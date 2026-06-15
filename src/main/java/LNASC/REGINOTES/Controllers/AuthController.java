@@ -35,8 +35,21 @@ public class AuthController {
     }
     @DeleteMapping("logout")
     public ResponseEntity logout (@AuthenticationPrincipal CustomUserDetails user, HttpServletRequest request){
-        String token = request.getHeader("Authorization").substring(7);
-        service.logout(user.getUser(),token);
+        service.logout(user.getUser(),request);
+        return ResponseEntity.ok().build();
+    }
+    @PostMapping("forgot-password")
+    public ResponseEntity forgotPassword(@Valid @RequestBody ForgotPasswordRequestDTO request){
+        service.generateRecoveryCode(request);
+        return ResponseEntity.ok().build();
+    }
+    @PostMapping("verify-code")
+    public ResponseEntity<VerifyCodeResponseDTO> verifyCodePassword(@Valid @RequestBody VerifyCodeRequestDTO request){
+        return ResponseEntity.ok().body(service.verifyResetCode(request));
+    }
+    @PostMapping("reset-password")
+    public ResponseEntity resetPassword( @Valid @RequestBody ResetPasswordRequestDTO request){
+        service.alterPasswordByRecoverCode(request);
         return ResponseEntity.ok().build();
     }
 }

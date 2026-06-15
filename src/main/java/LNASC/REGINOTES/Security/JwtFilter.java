@@ -1,5 +1,6 @@
 package LNASC.REGINOTES.Security;
 
+import LNASC.REGINOTES.Exceptions.NotFoundException;
 import LNASC.REGINOTES.Models.RefreshToken;
 import LNASC.REGINOTES.Repositories.RefreshTokenRepository;
 import io.jsonwebtoken.ExpiredJwtException;
@@ -31,12 +32,12 @@ public class JwtFilter extends OncePerRequestFilter {
     @Autowired
     private JwtService jwtService;
     @Autowired
-    private RedisTemplate redisTemplate;
+    private RedisTemplate<String,String> redisTemplate;
 
 
 
     @Override
-    protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
+    protected boolean shouldNotFilter(HttpServletRequest request){
         String path = request.getRequestURI();
         return path.equals("/auth/login") ||
                 path.equals("/auth/register") ||
@@ -62,8 +63,8 @@ public class JwtFilter extends OncePerRequestFilter {
 
         String token = header.substring(7);
 
-        if (Boolean.TRUE.equals(redisTemplate.hasKey("blacklist:"+ token))){
-            filterChain.doFilter(request,response);
+        if (Boolean.TRUE.equals(redisTemplate.hasKey("blacklist:" + token))) {
+            filterChain.doFilter(request, response);
             return;
         }
 
@@ -83,7 +84,7 @@ public class JwtFilter extends OncePerRequestFilter {
            handlerExceptionResolver.resolveException(request,response,null,ex);
        }catch (JwtException ex){
            handlerExceptionResolver.resolveException(request,response,null,ex);
-       }catch (Exception e){
+       }catch (NotFoundException e){
            handlerExceptionResolver.resolveException(request,response,null,e);
        }
 

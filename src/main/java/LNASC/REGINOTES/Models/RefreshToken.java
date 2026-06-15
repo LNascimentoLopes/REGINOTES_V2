@@ -19,8 +19,6 @@ public class RefreshToken {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(length = 512, nullable = false)
-    private String token;
     @Column(name = "user_agent",length = 500)
     private String userAgent;
     @Column(name = "ip_address",length = 45)

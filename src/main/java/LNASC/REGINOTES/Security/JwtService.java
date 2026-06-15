@@ -61,6 +61,7 @@ public class JwtService {
     }
 
     private Claims getBody(String token){
+
         return Jwts.parser()
                 .verifyWith(getSigningKey())
                 .build().parseSignedClaims(token)
@@ -68,11 +69,10 @@ public class JwtService {
     }
 
     @Transactional
-    public String generateRefreshToken(User user,String token){
+    public String generateRefreshToken(User user){
         RefreshToken rToken = new RefreshToken();
 
         rToken.setTokenOwner(user);
-        rToken.setToken(token);
         rToken.setExpiresAt(Instant.now().plusSeconds(60*60*24*7));
 
         refreshTokenRepository.save(rToken);
