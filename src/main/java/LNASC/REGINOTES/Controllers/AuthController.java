@@ -3,6 +3,7 @@ package LNASC.REGINOTES.Controllers;
 import LNASC.REGINOTES.DTOs.AuthDTOs.*;
 import LNASC.REGINOTES.Security.CustomUserDetails;
 import LNASC.REGINOTES.Services.AuthService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController()
 @RequestMapping("/auth")
+@Tag(name = "Authentication")
 public class AuthController {
 
     @Autowired

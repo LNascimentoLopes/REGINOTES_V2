@@ -16,7 +16,7 @@ public class SwaggerConfig {
         return new OpenAPI()
                 .info(new Info()
                         .title("REGINOTES")
-                        .description("API RESTful desenvolvida com Spring Boot 3")
+                        .description("API RESTful desenvolvida com Spring Boot 4")
                         .version("v1.0.0")
                         .contact(new Contact().name("Lucas Nascimento").url("https://www.linkedin.com/in/lucas-nascimento-661b162b1/")))
 

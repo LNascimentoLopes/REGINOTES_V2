@@ -7,12 +7,16 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
 public interface WorkspaceMemberRepository extends JpaRepository<WorkspaceMember, UUID> {
     @Query("SELECT wm FROM WorkspaceMember wm WHERE wm.collabWorkspace.id = :workspaceId")
     List<WorkspaceMember> findMemberByWorkspace (@Param("workspaceId")UUID workspaceId);
+
+    @Query("SELECT wm FROM WorkspaceMember wm WHERE wm.collabWorkspace.id = :workspaceId AND wm.workspaceGuest.id =:userId")
+    Optional<WorkspaceMember> findMemberByWorkspaceAndID (@Param("workspaceId")UUID workspaceId, @Param("userId") UUID userId);
 
     @Query("SELECT wm FROM WorkspaceMember wm WHERE wm.workspaceGuest.id = :userId ")
     List<WorkspaceMember> findMemberByUserId (@Param("userId")UUID userId);

@@ -2,6 +2,8 @@ package LNASC.REGINOTES.Models;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -26,6 +28,8 @@ public class Workspace {
 
     @Column(name = "icon_url")
     private String iconUrl;
+
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
     private String settings;
 

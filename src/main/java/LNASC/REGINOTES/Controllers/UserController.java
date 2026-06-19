@@ -3,6 +3,7 @@ package LNASC.REGINOTES.Controllers;
 import LNASC.REGINOTES.DTOs.UserDTOs.*;
 import LNASC.REGINOTES.Security.CustomUserDetails;
 import LNASC.REGINOTES.Services.UserService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,21 +13,22 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/user")
+@Tag(name = "Users")
 public class UserController {
 
     @Autowired
     private UserService service;
 
-    @GetMapping("me")
+    @GetMapping()
     public ResponseEntity<GetUserResponseDTO> getMe(@AuthenticationPrincipal CustomUserDetails user){
         return ResponseEntity.ok().body(service.getUserInfo(user));
     }
-    @DeleteMapping("deactivate")
+    @DeleteMapping()
     public ResponseEntity deactivateAccount (@AuthenticationPrincipal CustomUserDetails user){
         service.deactivateAccount(user);
         return ResponseEntity.ok().build();
     }
-    @PatchMapping("update")
+    @PatchMapping()
     public ResponseEntity updateUser (@Valid @RequestBody UpdateUserRequestDTO request, @AuthenticationPrincipal CustomUserDetails user, HttpServletRequest httpServletRequest){
         service.updateUserData(user,request,httpServletRequest);
         return ResponseEntity.ok().build();

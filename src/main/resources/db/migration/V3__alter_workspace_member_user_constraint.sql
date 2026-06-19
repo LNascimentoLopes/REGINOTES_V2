@@ -1,0 +1,3 @@
+ALTER TABLE workspace_members DROP CONSTRAINT workspace_members_workspace_id_key;
+ALTER TABLE workspace_members DROP CONSTRAINT workspace_members_user_id_key;
+ALTER TABLE workspace_members ADD CONSTRAINT workspace_members_unique UNIQUE (workspace_id, user_id);
