@@ -15,6 +15,7 @@ import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -29,6 +30,8 @@ public class WorkspaceService {
     private WorkspaceMemberRepository memberRepository;
     @Autowired
     private WorkspaceMapper mapper;
+    @Autowired
+    private RedisTemplate<String,String> redisTemplate;
 
 
     //Base Workspace Services
@@ -49,18 +52,18 @@ public class WorkspaceService {
         return workspacesByAffiliation.map(workspace -> mapper.entityToGetResponseDTO(workspace));
     }
     public GetWorkspacesResponseDTO getWorkspaceById(CustomUserDetails userDetails, UUID id){
-        Workspace workspace = repository.findWorkspaceById(id, userDetails.getUserId()).orElseThrow(() -> new NotFoundException("workspace not found"));
+        Workspace workspace = repository.findWorkspaceByIdAndUserId(id, userDetails.getUserId()).orElseThrow(() -> new NotFoundException("workspace not found"));
         return mapper.entityToGetResponseDTO(workspace);
     }
     @Transactional
     public void updateWorkspaceById (CustomUserDetails user, UUID id, UpdateWorkspaceRequestDTO request){
-        Workspace workspace = repository.findWorkspaceById(id, user.getUserId()).orElseThrow(() -> new EntityNotFoundException("User not found"));
+        Workspace workspace = repository.findWorkspaceByIdAndUserId(id, user.getUserId()).orElseThrow(() -> new EntityNotFoundException("User not found"));
         mapper.updateEntity(request,user.getUser(),workspace);
     }
     @Transactional
     public void softDeleteWorkspaceById(CustomUserDetails userDetails, UUID id){
-        Workspace workspace = repository.findWorkspaceById(id, userDetails.getUserId()).orElseThrow(() -> new NotFoundException("WorkspaceNotFound"));
-        WorkspaceMember member = memberRepository.findMemberByWorkspaceAndID(workspace.getId(), userDetails.getUserId()).orElseThrow(() -> new NotFoundException("Member not found"));
+        Workspace workspace = repository.findWorkspaceByIdAndUserId(id, userDetails.getUserId()).orElseThrow(() -> new NotFoundException("WorkspaceNotFound"));
+        WorkspaceMember member = memberRepository.findMemberByWorkspaceAndId(workspace.getId(), userDetails.getUserId()).orElseThrow(() -> new NotFoundException("Member not found"));
         if (member.getRole().equals(WorkspaceRole.OWNER)){
             repository.softDeleteByWorkspaceId(id, Instant.now());
         }else{
@@ -93,5 +96,36 @@ public class WorkspaceService {
             throw new NotFoundException("Workspace Not Found");
         }
     }
+
+    //member services
+    @Transactional
+    public void addMemberByInvite(CustomUserDetails userDetails,UUID id){
+        String role = redisTemplate.opsForValue().get("invite:" + id + ":" + userDetails.getUserId());
+
+        if (role == null){
+            throw  new NotFoundException("invite not found or expired");
+        }
+
+        Workspace workspace = repository.findWorkspaceById(id).orElseThrow(() -> new NotFoundException("Workspace Not Found"));
+
+        WorkspaceMember member = new WorkspaceMember();
+        member.setWorkspaceHost(workspace.getOwner());
+        member.setCollabWorkspace(workspace);
+        member.setRole(WorkspaceRole.valueOf(role));
+        member.setWorkspaceGuest(userDetails.getUser());
+
+        memberRepository.save(member);
+
+        redisTemplate.delete("invite:" + id + ":" + userDetails.getUserId());
+    }
+
+
+//    @Transactional
+//    public void updateMemberRole(CustomUserDetails userDetails, UUID userId){
+//
+//        memberRepository.findMemberByWorkspaceAndId()
+//
+//
+//    }
 }
 

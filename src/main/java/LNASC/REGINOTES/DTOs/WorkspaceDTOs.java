@@ -1,8 +1,10 @@
 package LNASC.REGINOTES.DTOs;
 
+import LNASC.REGINOTES.Models.Enums.WorkspaceRole;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.NotEmpty;
 import tools.jackson.databind.JsonNode;
 
 import java.util.Optional;
@@ -40,5 +42,18 @@ public class WorkspaceDTOs {
       Optional<JsonNode> settings,
       @Schema(example = "123e4567-e89b-12d3-a456-426614174000")
       Optional<UUID> parentId
+    ){}
+
+    public record InviteMemberRequestDTO(
+            @Email
+            @NotEmpty
+            String email,
+            WorkspaceRole role
+    ){}
+    public record inviteEmailPayloadDTO(
+            String email,
+            String userName,
+            String workspaceName,
+            UUID workspaceId
     ){}
 }

@@ -1,6 +1,5 @@
 package LNASC.REGINOTES.Repositories;
 
-import LNASC.REGINOTES.Models.Note;
 import LNASC.REGINOTES.Models.Workspace;
 import io.lettuce.core.dynamic.annotation.Param;
 import org.springframework.data.domain.Page;
@@ -30,7 +29,10 @@ public interface WorkspaceRepository extends JpaRepository<Workspace, UUID> {
     Page<Workspace> findTrashedWorkspacesByOwner (@Param("ownerId")UUID ownerId, Pageable pageable);
 
     @Query("SELECT w FROM Workspace w LEFT JOIN w.workspaceMembers wm WHERE w.id =:workspaceId AND wm.workspaceGuest.id =:userId AND w.deletedAt IS NULL")
-    Optional<Workspace> findWorkspaceById (@Param("workspaceId")UUID workspaceId, @Param("userId") UUID userId);
+    Optional<Workspace> findWorkspaceByIdAndUserId(@Param("workspaceId")UUID workspaceId, @Param("userId") UUID userId);
+
+    @Query("SELECT w FROM Workspace w WHERE w.id =:workspaceId  AND w.deletedAt IS NULL")
+    Optional<Workspace> findWorkspaceById (@Param("workspaceId")UUID workspaceId);
 
     @Query("SELECT w FROM Workspace w LEFT JOIN w.workspaceMembers wm WHERE w.id =:workspaceId AND wm.workspaceGuest.id =:userId AND w.deletedAt IS NOT NULL")
     Optional<Workspace> findTrashedWorkspaceById (@Param("workspaceId")UUID workspaceId, @Param("userId") UUID userId);

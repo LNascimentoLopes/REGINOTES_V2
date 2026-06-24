@@ -2,6 +2,7 @@ package LNASC.REGINOTES.Controllers;
 
 import LNASC.REGINOTES.DTOs.WorkspaceDTOs.*;
 import LNASC.REGINOTES.Security.CustomUserDetails;
+import LNASC.REGINOTES.Services.NotificationsService;
 import LNASC.REGINOTES.Services.WorkspaceService;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -25,6 +26,8 @@ public class WorkspaceController {
 
     @Autowired
     private WorkspaceService service;
+    @Autowired
+    private NotificationsService notificationsService;
 
 
     //BASE MAPPINGS
@@ -97,6 +100,28 @@ public class WorkspaceController {
         return ResponseEntity.ok().body(service.getAllMemberWorkspaces(userDetails,pageable));
     }
 
-    @PostMapping
+    @PostMapping("members/invites/{id}")
+    public ResponseEntity<Void> InviteMemberToWorkspace(
+            @AuthenticationPrincipal CustomUserDetails userDetails,InviteMemberRequestDTO request,
+            @RequestParam UUID id){
+        notificationsService.inviteToWorkspace(id,request,userDetails.getUser());
+
+        return ResponseEntity.ok().build();
+    }
+    @PostMapping("members/add/{id}")
+    public ResponseEntity<Void> addMemberByInvite (
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestParam UUID id){
+        service.addMemberByInvite(userDetails,id);
+
+        return ResponseEntity.ok().build();
+    }
+    @PatchMapping("members/{id}")
+    public ResponseEntity<Void> changeMemberRole (
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestParam UUID id){
+
+        return ResponseEntity.ok().build();
+    }
 
 }

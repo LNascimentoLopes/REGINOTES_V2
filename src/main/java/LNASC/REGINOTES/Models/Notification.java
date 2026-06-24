@@ -5,6 +5,8 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -20,9 +22,10 @@ public class Notification {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(nullable = false)
     private NotificationType type;
-    @Column(nullable = false, columnDefinition = "jsonb")
+    @Column(nullable = false)
     private String payload;
     @Column(nullable = false)
     private Boolean read;
@@ -38,5 +41,6 @@ public class Notification {
     @PrePersist
     public void prePersist() {
         this.createdAt = Instant.now();
+        this.read = false;
     }
 }

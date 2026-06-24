@@ -1,9 +1,12 @@
 package LNASC.REGINOTES.Services;
 
+import LNASC.REGINOTES.DTOs.WorkspaceDTOs.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
+
+import java.util.UUID;
 
 @Service
 public class EmailService {
@@ -17,6 +20,17 @@ public class EmailService {
         message.setSubject("Password redefinition code");
         message.setText("Your redefinition code is: "+ code);
 
+        mailSender.send(message);
+    }
+
+    public void sendInviteEmail(String to, String inviterName, String workspaceName, UUID workspaceId) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(to);
+        message.setSubject(inviterName + " te convidou para colaborar no Reginotes");
+        message.setText(
+                inviterName + " convidou você para participar do workspace \"" + workspaceName + "\".\n\n" +
+                        "Acesse o link para aceitar: https://reginotes.com/member/add/" + workspaceId
+        );
         mailSender.send(message);
     }
 }
