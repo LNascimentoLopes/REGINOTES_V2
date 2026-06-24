@@ -3,12 +3,15 @@ package LNASC.REGINOTES.Util.Mappers;
 import LNASC.REGINOTES.DTOs.WorkspaceDTOs.*;
 import LNASC.REGINOTES.Models.User;
 import LNASC.REGINOTES.Models.Workspace;
+import LNASC.REGINOTES.Models.WorkspaceMember;
 import LNASC.REGINOTES.Repositories.UserRepository;
 import LNASC.REGINOTES.Repositories.WorkspaceRepository;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Component;
+
+import java.util.List;
 
 @Component
 public class WorkspaceMapper {
@@ -56,5 +59,16 @@ public class WorkspaceMapper {
                workspace.getParent() != null ? workspace.getParent().getId() : null
        );
    }
+
+   public GetWorkspaceMembersResponseDTO membersToResponseDTO(WorkspaceMember member){
+       return new GetWorkspaceMembersResponseDTO(
+               member.getId(),
+               member.getWorkspaceGuest().getId(),
+               member.getRole(),
+               member.getJoinedAt()
+       );
+   }
+
+
 
 }

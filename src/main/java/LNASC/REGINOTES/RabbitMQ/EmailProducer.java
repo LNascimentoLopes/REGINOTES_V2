@@ -12,7 +12,7 @@ public class EmailProducer {
     @Autowired
     private RabbitTemplate rabbitTemplate;
 
-    public void inviteByEmail(inviteEmailPayloadDTO request){
+    public void inviteByEmail(InviteEmailPayloadDTO request){
         rabbitTemplate.convertAndSend(
                 RabbitMQConfig.EMAIL_EXCHANGE,
                 RabbitMQConfig.EMAIL_ROUTING_KEY,

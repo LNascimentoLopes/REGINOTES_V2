@@ -25,8 +25,8 @@ public class NotificationMapper {
         return dto;
     }
 
-    public inviteEmailPayloadDTO  mountPayload (InviteMemberRequestDTO request,String inviterName, String workspaceName, UUID workspaceId){
-        inviteEmailPayloadDTO payload = new inviteEmailPayloadDTO(
+    public InviteEmailPayloadDTO mountPayload (InviteMemberRequestDTO request, String inviterName, String workspaceName, UUID workspaceId){
+        InviteEmailPayloadDTO payload = new InviteEmailPayloadDTO(
                 request.email(),
                 inviterName,
                 workspaceName,

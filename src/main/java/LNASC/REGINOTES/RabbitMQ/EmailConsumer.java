@@ -14,7 +14,7 @@ public class EmailConsumer {
     private EmailService emailService;
 
     @RabbitListener(queues = RabbitMQConfig.EMAIL_QUEUE)
-    public void consumeEmailMessage(inviteEmailPayloadDTO request){
+    public void consumeEmailMessage(InviteEmailPayloadDTO request){
         emailService.sendInviteEmail(request.email(), request.userName(), request.workspaceName(), request.workspaceId());
 
     }

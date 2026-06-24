@@ -17,6 +17,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -93,11 +94,18 @@ public class WorkspaceController {
     }
     //MEMBER MAPPINGS
 
-    @GetMapping("members")
+    @GetMapping("members/affiliations")
     public ResponseEntity<Page<GetWorkspacesResponseDTO>> getAffiliatedWorkspaces(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @Parameter(hidden = true)  Pageable pageable){
         return ResponseEntity.ok().body(service.getAllMemberWorkspaces(userDetails,pageable));
+    }
+    @GetMapping("members/{id}")
+    public ResponseEntity<List<GetWorkspaceMembersResponseDTO>> getWorkspaceMembers (
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestParam UUID workId
+    ){
+        return ResponseEntity.ok().body(service.getWorkspaceMembers(userDetails,workId));
     }
 
     @PostMapping("members/invites/{id}")
@@ -119,9 +127,32 @@ public class WorkspaceController {
     @PatchMapping("members/{id}")
     public ResponseEntity<Void> changeMemberRole (
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestParam UUID id){
-
+            @RequestParam UUID id,
+            @RequestBody UpdateMemberRoleRequestDTO request){
+        service.updateMemberRole(userDetails,id,request);
         return ResponseEntity.ok().build();
+    }
+    @DeleteMapping("members/{id}/member")
+    public ResponseEntity<Void> removeMemberFromWorkspace(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestParam("id") UUID workId,@PathVariable("memberId") UUID memberId) {
+        service.deleteMemberFromWorkspace(userDetails,workId,memberId);
+        return ResponseEntity.ok().build();
+    }
+    //children workspaces
+    @GetMapping("children/{id}")
+    public ResponseEntity<Page<GetWorkspacesResponseDTO>> getAllChildWorkspaces(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestParam UUID id,
+            @Parameter(hidden = true) Pageable pageable){
+        return ResponseEntity.ok().body(service.getAllChildWorkspaces(userDetails,id,pageable)) ;
+    }
+    @GetMapping("children/trashs/{id}")
+    public ResponseEntity<Page<GetWorkspacesResponseDTO>> getAllChildTrashWorkspaces(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestParam UUID id,
+            @Parameter(hidden = true) Pageable pageable){
+        return ResponseEntity.ok().body(service.getAllTrashedChildWorkspaces(userDetails,id,pageable)) ;
     }
 
 }

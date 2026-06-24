@@ -7,6 +7,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import tools.jackson.databind.JsonNode;
 
+import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -48,12 +49,26 @@ public class WorkspaceDTOs {
             @Email
             @NotEmpty
             String email,
+            @Schema(example = "VIEWER")
             WorkspaceRole role
     ){}
-    public record inviteEmailPayloadDTO(
+    public record InviteEmailPayloadDTO(
             String email,
             String userName,
             String workspaceName,
             UUID workspaceId
     ){}
+    public record UpdateMemberRoleRequestDTO(
+            @Schema(example = "123e4567-e89b-12d3-a456-426614174000")
+            UUID userId,
+            @Schema(example = "VIEWER")
+            WorkspaceRole role
+    ){}
+    public record GetWorkspaceMembersResponseDTO(
+            UUID memberbershipId,
+            UUID userId,
+            WorkspaceRole role,
+            Instant JoinedAt
+    ){}
+
 }

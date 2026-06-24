@@ -73,7 +73,7 @@ public class NotificationsService {
 
         notifyViaWebSocket(invitedUser.getId(), notification);
 
-        inviteEmailPayloadDTO payload = notificationMapper.mountPayload(invitedEmail, inviter.getDisplayName(), workspace.getName(), workspaceId);
+        InviteEmailPayloadDTO payload = notificationMapper.mountPayload(invitedEmail, inviter.getDisplayName(), workspace.getName(), workspaceId);
 
         producer.inviteByEmail(payload);
 

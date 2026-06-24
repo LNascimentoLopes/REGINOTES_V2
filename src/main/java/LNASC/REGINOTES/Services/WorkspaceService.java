@@ -19,6 +19,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -119,13 +120,61 @@ public class WorkspaceService {
         redisTemplate.delete("invite:" + id + ":" + userDetails.getUserId());
     }
 
+    @Transactional
+    public void updateMemberRole(CustomUserDetails userDetails, UUID workId, UpdateMemberRoleRequestDTO request){
+        WorkspaceMember toUpdateMember = memberRepository.findMemberByWorkspaceAndId(workId, request.userId()).orElseThrow(() -> new NotFoundException("Member Not Found"));
 
-//    @Transactional
-//    public void updateMemberRole(CustomUserDetails userDetails, UUID userId){
-//
-//        memberRepository.findMemberByWorkspaceAndId()
-//
-//
-//    }
+        WorkspaceMember updater = memberRepository.findMemberByWorkspaceAndId(workId, userDetails.getUserId()).orElseThrow(() -> new NotFoundException("Member Not Found"));
+        if (updater.getRole().getLevel() > request.role().getLevel() &&
+                toUpdateMember.getRole().getLevel() < updater.getRole().getLevel() &&
+                !updater.equals(toUpdateMember)){
+
+            toUpdateMember.setRole(request.role());
+            memberRepository.save(toUpdateMember);
+        }else {
+            throw new ForbiddenException("Role permisson level does not match");
+        }
+
+    }
+    public List<GetWorkspaceMembersResponseDTO> getWorkspaceMembers (CustomUserDetails userDetails, UUID workId){
+
+        List<WorkspaceMember> members = memberRepository.findMemberByWorkspace(workId);
+
+        if (members.stream().anyMatch(m -> m.getWorkspaceGuest().getId().equals(userDetails.getUserId()))){
+            List<WorkspaceMember> memberByWorkspace = memberRepository.findMemberByWorkspace(workId);
+
+            return memberByWorkspace.stream().map(member -> mapper.membersToResponseDTO(member)).toList();
+        }else {
+            throw new ForbiddenException("User not permitted");
+        }
+    }
+    @Transactional
+    public void deleteMemberFromWorkspace(CustomUserDetails userDetails, UUID workId, UUID memberId){
+        WorkspaceMember member = memberRepository.findMemberByWorkspaceAndId(workId, memberId).orElseThrow(() -> new NotFoundException("Membership not found"));
+        WorkspaceMember actingMember = memberRepository.findMemberByWorkspaceAndId( workId, userDetails.getUserId()).orElseThrow(() -> new NotFoundException("Membership not found"));
+        if (actingMember.getRole().getLevel() > member.getRole().getLevel() && !actingMember.equals(member)){
+            memberRepository.delete(member);
+        }else {
+            throw new ForbiddenException("Permission Level Insufficient");
+        }
+    }
+    // children workspaces
+
+    public Page<GetWorkspacesResponseDTO> getAllChildWorkspaces(CustomUserDetails userDetails,UUID id, Pageable pageable){
+        if (memberRepository.findIfWorkspaceMemberByWorkspaceId(userDetails.getUserId(), id)){
+            Page<Workspace> workspaces = repository.findChildrenWorkspaces(id, pageable);
+            return workspaces.map(work -> mapper.entityToGetResponseDTO(work));
+        }else {
+            throw new ForbiddenException("Access Level Insufficient");
+        }
+    }
+    public Page<GetWorkspacesResponseDTO> getAllTrashedChildWorkspaces(CustomUserDetails userDetails,UUID id, Pageable pageable){
+        if (memberRepository.findIfWorkspaceMemberByWorkspaceId(userDetails.getUserId(), id)){
+            Page<Workspace> workspaces = repository.findTrashChildrenWorkspaces(id, pageable);
+            return workspaces.map(work -> mapper.entityToGetResponseDTO(work));
+        }else {
+            throw new ForbiddenException("Access Level Insufficient");
+        }
+    }
 }
 
