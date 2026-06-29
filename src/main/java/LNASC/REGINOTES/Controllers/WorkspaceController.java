@@ -10,8 +10,6 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
-import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -48,13 +46,13 @@ public class WorkspaceController {
     }
     @GetMapping("{id}")
     public ResponseEntity<GetWorkspacesResponseDTO> getWorkspaceById(
-            @AuthenticationPrincipal CustomUserDetails userDetails, @RequestParam UUID id){
+            @AuthenticationPrincipal CustomUserDetails userDetails, @PathVariable UUID id){
         return ResponseEntity.ok().body(service.getWorkspaceById(userDetails,id));
     }
 
     @PatchMapping("{id}")
     public ResponseEntity<?> updateWorkspace (
-            @AuthenticationPrincipal CustomUserDetails userDetails, @RequestParam UUID id,
+            @AuthenticationPrincipal CustomUserDetails userDetails, @PathVariable UUID id,
             @Valid @RequestBody UpdateWorkspaceRequestDTO request){
         service.updateWorkspaceById(userDetails,id,request);
         return ResponseEntity.ok().build();
@@ -62,7 +60,7 @@ public class WorkspaceController {
 
     @DeleteMapping("{id}")
     public ResponseEntity<?> softDeleteWorkspace (
-            @AuthenticationPrincipal CustomUserDetails userDetails, @RequestParam UUID id){
+            @AuthenticationPrincipal CustomUserDetails userDetails, @PathVariable UUID id){
             service.softDeleteWorkspaceById(userDetails,id);
         return ResponseEntity.ok().build();
     }
@@ -77,80 +75,80 @@ public class WorkspaceController {
     }
     @GetMapping("trash/{id}")
     public ResponseEntity<GetWorkspacesResponseDTO> getTrashWorkspaceById(
-            @AuthenticationPrincipal CustomUserDetails userDetails, @RequestParam UUID id){
+            @AuthenticationPrincipal CustomUserDetails userDetails, @PathVariable UUID id){
         return ResponseEntity.ok().body(service.getTrashedWorkspaceById(userDetails,id));
     }
-    @PostMapping("trash/{id}")
+    @PatchMapping("trash/{id}/restore")
     public ResponseEntity<?> recoverWorkspaceById (
-            @AuthenticationPrincipal CustomUserDetails userDetails,@RequestParam UUID id){
+            @AuthenticationPrincipal CustomUserDetails userDetails,@PathVariable UUID id){
         service.recoverTrashWorkspaceById(userDetails,id);
         return ResponseEntity.ok().build();
     }
     @DeleteMapping("trash/{id}")
     public ResponseEntity<?> hardDeleteWorkspaceById (
-            @AuthenticationPrincipal CustomUserDetails userDetails, @RequestParam UUID id){
+            @AuthenticationPrincipal CustomUserDetails userDetails, @PathVariable UUID id){
         service.hardDeleteWorkspaceById(userDetails,id);
         return ResponseEntity.ok().build();
     }
     //MEMBER MAPPINGS
 
-    @GetMapping("members/affiliations")
+    @GetMapping("affiliated")
     public ResponseEntity<Page<GetWorkspacesResponseDTO>> getAffiliatedWorkspaces(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @Parameter(hidden = true)  Pageable pageable){
         return ResponseEntity.ok().body(service.getAllMemberWorkspaces(userDetails,pageable));
     }
-    @GetMapping("members/{id}")
+    @GetMapping("{workId}/members/")
     public ResponseEntity<List<GetWorkspaceMembersResponseDTO>> getWorkspaceMembers (
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestParam UUID workId
+            @PathVariable UUID workId
     ){
         return ResponseEntity.ok().body(service.getWorkspaceMembers(userDetails,workId));
     }
 
-    @PostMapping("members/invites/{id}")
+    @PostMapping("{id}/invites")
     public ResponseEntity<Void> InviteMemberToWorkspace(
-            @AuthenticationPrincipal CustomUserDetails userDetails,InviteMemberRequestDTO request,
-            @RequestParam UUID id){
+            @AuthenticationPrincipal CustomUserDetails userDetails, @RequestBody InviteMemberRequestDTO request,
+            @PathVariable UUID id){
         notificationsService.inviteToWorkspace(id,request,userDetails.getUser());
 
         return ResponseEntity.ok().build();
     }
-    @PostMapping("members/add/{id}")
+    @PostMapping("{id}/invites/accept")
     public ResponseEntity<Void> addMemberByInvite (
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestParam UUID id){
+            @PathVariable UUID id){
         service.addMemberByInvite(userDetails,id);
 
         return ResponseEntity.ok().build();
     }
-    @PatchMapping("members/{id}")
+    @PatchMapping("{workId}/members")
     public ResponseEntity<Void> changeMemberRole (
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestParam UUID id,
+            @PathVariable UUID workId,
             @RequestBody UpdateMemberRoleRequestDTO request){
-        service.updateMemberRole(userDetails,id,request);
+        service.updateMemberRole(userDetails,workId,request);
         return ResponseEntity.ok().build();
     }
-    @DeleteMapping("members/{id}/member")
+    @DeleteMapping("{workId}/members/{memberId}")
     public ResponseEntity<Void> removeMemberFromWorkspace(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestParam("id") UUID workId,@PathVariable("memberId") UUID memberId) {
+            @PathVariable("workId") UUID workId,@PathVariable("memberId") UUID memberId) {
         service.deleteMemberFromWorkspace(userDetails,workId,memberId);
         return ResponseEntity.ok().build();
     }
     //children workspaces
-    @GetMapping("children/{id}")
+    @GetMapping("{id}/children")
     public ResponseEntity<Page<GetWorkspacesResponseDTO>> getAllChildWorkspaces(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestParam UUID id,
+            @PathVariable UUID id,
             @Parameter(hidden = true) Pageable pageable){
         return ResponseEntity.ok().body(service.getAllChildWorkspaces(userDetails,id,pageable)) ;
     }
-    @GetMapping("children/trashs/{id}")
+    @GetMapping("{id}/children/trashs")
     public ResponseEntity<Page<GetWorkspacesResponseDTO>> getAllChildTrashWorkspaces(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestParam UUID id,
+            @PathVariable UUID id,
             @Parameter(hidden = true) Pageable pageable){
         return ResponseEntity.ok().body(service.getAllTrashedChildWorkspaces(userDetails,id,pageable)) ;
     }

@@ -1,10 +1,11 @@
 package LNASC.REGINOTES.Models;
 
-import LNASC.REGINOTES.Models.Enums.SearchStatus;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -24,14 +25,9 @@ public class Note {
 
     @Column(nullable = false)
     private String title;
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(nullable = false,columnDefinition = "jsonb")
     private String content;
-    @Column(nullable = false)
-    private Integer version;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "search_status",nullable = false)
-    private SearchStatus searchStatus;
     @Column(name = "is_pinned",nullable = false)
     private Boolean isPinned;
     @Column(name = "created_at",nullable = false)
@@ -40,14 +36,13 @@ public class Note {
     private Instant updatedAt;
     @Column(name = "deleted_at")
     private Instant deletedAt;
-    @Column(name = "indexed_at")
-    private Instant indexedAt;
 
 
     @PrePersist
     public void prePersist(){
         this.createdAt = Instant.now();
         this.updatedAt = Instant.now();
+        this.isPinned = false;
     }
     @PreUpdate
     public void preUpdate(){
@@ -55,7 +50,7 @@ public class Note {
     }
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "workspace_id", nullable = false)
+    @JoinColumn(name = "workspace_id")
     private Workspace workspaceNote;
 
     @ManyToOne(fetch = FetchType.LAZY)

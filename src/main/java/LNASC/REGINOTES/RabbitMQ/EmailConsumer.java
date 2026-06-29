@@ -1,6 +1,7 @@
 package LNASC.REGINOTES.RabbitMQ;
 
 import LNASC.REGINOTES.Config.RabbitMQConfig;
+import LNASC.REGINOTES.DTOs.NotificationDTOs.InviteEmailPayloadDTO;
 import LNASC.REGINOTES.DTOs.WorkspaceDTOs.*;
 import LNASC.REGINOTES.Services.EmailService;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
@@ -15,7 +16,7 @@ public class EmailConsumer {
 
     @RabbitListener(queues = RabbitMQConfig.EMAIL_QUEUE)
     public void consumeEmailMessage(InviteEmailPayloadDTO request){
-        emailService.sendInviteEmail(request.email(), request.userName(), request.workspaceName(), request.workspaceId());
+        emailService.sendInviteEmail(request.email(), request.userName(), request.Name(), request.Id(),request.type().toString());
 
     }
 

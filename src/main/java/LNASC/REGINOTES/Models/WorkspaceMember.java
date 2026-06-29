@@ -1,7 +1,7 @@
 package LNASC.REGINOTES.Models;
 
 
-import LNASC.REGINOTES.Models.Enums.WorkspaceRole;
+import LNASC.REGINOTES.Util.Enums.WorkspaceRole;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;

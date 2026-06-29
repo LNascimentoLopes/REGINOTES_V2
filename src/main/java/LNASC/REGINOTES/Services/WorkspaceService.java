@@ -3,7 +3,7 @@ package LNASC.REGINOTES.Services;
 import LNASC.REGINOTES.DTOs.WorkspaceDTOs.*;
 import LNASC.REGINOTES.Exceptions.ForbiddenException;
 import LNASC.REGINOTES.Exceptions.NotFoundException;
-import LNASC.REGINOTES.Models.Enums.WorkspaceRole;
+import LNASC.REGINOTES.Util.Enums.WorkspaceRole;
 import LNASC.REGINOTES.Models.Workspace;
 import LNASC.REGINOTES.Models.WorkspaceMember;
 import LNASC.REGINOTES.Repositories.WorkspaceMemberRepository;
@@ -17,6 +17,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
+import tools.jackson.databind.ObjectMapper;
 
 import java.time.Instant;
 import java.util.List;
@@ -33,6 +34,8 @@ public class WorkspaceService {
     private WorkspaceMapper mapper;
     @Autowired
     private RedisTemplate<String,String> redisTemplate;
+    @Autowired
+    private ObjectMapper objMapper;
 
 
     //Base Workspace Services
@@ -52,17 +55,31 @@ public class WorkspaceService {
         Page<Workspace> workspacesByAffiliation = repository.findWorkspacesByAffiliation(userDetails.getUserId(), pageable);
         return workspacesByAffiliation.map(workspace -> mapper.entityToGetResponseDTO(workspace));
     }
+
     public GetWorkspacesResponseDTO getWorkspaceById(CustomUserDetails userDetails, UUID id){
+        String cacheKey = "workspaces:" + userDetails.getUserId() + ":" + id;
+        String cached = redisTemplate.opsForValue().get(cacheKey);
+
+        if (cached != null){
+            return objMapper.readValue(cached, GetWorkspacesResponseDTO.class);
+        }
+
         Workspace workspace = repository.findWorkspaceByIdAndUserId(id, userDetails.getUserId()).orElseThrow(() -> new NotFoundException("workspace not found"));
         return mapper.entityToGetResponseDTO(workspace);
     }
     @Transactional
     public void updateWorkspaceById (CustomUserDetails user, UUID id, UpdateWorkspaceRequestDTO request){
+        String cacheKey = "workspaces:" + user.getUserId() + ":" + id;
+        redisTemplate.delete(cacheKey);
+
         Workspace workspace = repository.findWorkspaceByIdAndUserId(id, user.getUserId()).orElseThrow(() -> new EntityNotFoundException("User not found"));
         mapper.updateEntity(request,user.getUser(),workspace);
     }
     @Transactional
     public void softDeleteWorkspaceById(CustomUserDetails userDetails, UUID id){
+        String cacheKey = "workspaces:" + userDetails.getUserId() + ":" + id;
+        redisTemplate.delete(cacheKey);
+
         Workspace workspace = repository.findWorkspaceByIdAndUserId(id, userDetails.getUserId()).orElseThrow(() -> new NotFoundException("WorkspaceNotFound"));
         WorkspaceMember member = memberRepository.findMemberByWorkspaceAndId(workspace.getId(), userDetails.getUserId()).orElseThrow(() -> new NotFoundException("Member not found"));
         if (member.getRole().equals(WorkspaceRole.OWNER)){

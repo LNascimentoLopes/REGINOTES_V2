@@ -1,19 +1,17 @@
 package LNASC.REGINOTES.Services;
 
+import LNASC.REGINOTES.DTOs.NoteDTOs.*;
+import LNASC.REGINOTES.DTOs.NotificationDTOs.*;
 import LNASC.REGINOTES.DTOs.WorkspaceDTOs.*;
 import LNASC.REGINOTES.Exceptions.ForbiddenException;
 import LNASC.REGINOTES.Exceptions.NotFoundException;
-import LNASC.REGINOTES.Models.Enums.NotificationType;
-import LNASC.REGINOTES.Models.Enums.WorkspaceRole;
-import LNASC.REGINOTES.Models.Notification;
-import LNASC.REGINOTES.Models.User;
-import LNASC.REGINOTES.Models.Workspace;
-import LNASC.REGINOTES.Models.WorkspaceMember;
+import LNASC.REGINOTES.Models.*;
+import LNASC.REGINOTES.Util.Enums.InviteType;
+import LNASC.REGINOTES.Util.Enums.NoteRole;
+import LNASC.REGINOTES.Util.Enums.NotificationType;
+import LNASC.REGINOTES.Util.Enums.WorkspaceRole;
 import LNASC.REGINOTES.RabbitMQ.EmailProducer;
-import LNASC.REGINOTES.Repositories.NotificationRepository;
-import LNASC.REGINOTES.Repositories.UserRepository;
-import LNASC.REGINOTES.Repositories.WorkspaceMemberRepository;
-import LNASC.REGINOTES.Repositories.WorkspaceRepository;
+import LNASC.REGINOTES.Repositories.*;
 import LNASC.REGINOTES.Util.Mappers.NotificationMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -42,6 +40,10 @@ public class NotificationsService {
     private WorkspaceRepository workspaceRepository;
     @Autowired
     private WorkspaceMemberRepository workspaceMemberRepository;
+    @Autowired
+    private NoteCollaboratorRepository noteCollabRepository;
+    @Autowired
+    private NoteRepository noteRepository;
 
     public void notifyViaWebSocket(UUID userId, Notification notification) {
         messagingTemplate.convertAndSendToUser(
@@ -73,7 +75,7 @@ public class NotificationsService {
 
         notifyViaWebSocket(invitedUser.getId(), notification);
 
-        InviteEmailPayloadDTO payload = notificationMapper.mountPayload(invitedEmail, inviter.getDisplayName(), workspace.getName(), workspaceId);
+        InviteEmailPayloadDTO payload = notificationMapper.mountPayload(invitedEmail, inviter.getDisplayName(), workspace.getName(), workspaceId, InviteType.WORKSPACE);
 
         producer.inviteByEmail(payload);
 
@@ -81,5 +83,38 @@ public class NotificationsService {
         redisTemplate.opsForValue().set("invite:"+workspaceId+":"+invitedUser.getId(), invitedEmail.role().toString(), ttl);
 
     }
+    public void inviteToNote(UUID noteId, InviteCollabRequestDTO invitedEmail, User inviter){
+
+        User invitedUser = userRepository.findByEmail(invitedEmail.email()).orElseThrow(() -> new NotFoundException("User not found"));
+
+        if (noteCollabRepository.findIfUserCollaborator(invitedUser.getId(), noteId)){
+            throw new ForbiddenException("User is already a member");
+        }
+        Note note = noteRepository.findNoteById(noteId).orElseThrow(()-> new NotFoundException("Note Not found"));
+
+        NoteCollaborator collaborator = noteCollabRepository.findCollabByUserId(inviter.getId(),noteId).orElseThrow(() -> new NotFoundException("Collaborator not found"));
+
+        if (collaborator.getRole() == NoteRole.VIEWER ){
+            throw  new ForbiddenException("inviter does not have permission");
+        }
+
+        Notification notification = new Notification();
+        notification.setType(NotificationType.NOTE_SHARED);
+        notification.setNotificationOwner(invitedUser);
+        notification.setPayload(inviter.getDisplayName() + " invited you to their note.");
+        notificationRepository.save(notification);
+
+        notifyViaWebSocket(invitedUser.getId(), notification);
+
+
+        InviteEmailPayloadDTO payload = notificationMapper.mountPayload( invitedEmail , inviter.getDisplayName(), note.getTitle(), noteId, InviteType.NOTE);
+
+        producer.inviteByEmail(payload);
+
+        Duration ttl = Duration.ofDays(3);
+        redisTemplate.opsForValue().set("invite:"+noteId+":"+invitedUser.getId(), invitedEmail.role().toString(), ttl);
+
+    }
+
 
 }

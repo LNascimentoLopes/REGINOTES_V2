@@ -3,6 +3,8 @@ package LNASC.REGINOTES.Util.Mappers;
 import LNASC.REGINOTES.DTOs.NotificationDTOs.*;
 import LNASC.REGINOTES.DTOs.WorkspaceDTOs.*;
 import LNASC.REGINOTES.Models.Notification;
+import LNASC.REGINOTES.Util.EmailInvitePattern;
+import LNASC.REGINOTES.Util.Enums.InviteType;
 import org.springframework.stereotype.Component;
 
 import java.util.UUID;
@@ -25,14 +27,13 @@ public class NotificationMapper {
         return dto;
     }
 
-    public InviteEmailPayloadDTO mountPayload (InviteMemberRequestDTO request, String inviterName, String workspaceName, UUID workspaceId){
-        InviteEmailPayloadDTO payload = new InviteEmailPayloadDTO(
+    public InviteEmailPayloadDTO mountPayload (EmailInvitePattern<?> request, String inviterName, String title, UUID collabId, InviteType type){
+        return new InviteEmailPayloadDTO(
                 request.email(),
                 inviterName,
-                workspaceName,
-                workspaceId
-
+                title,
+                collabId,
+                type
         );
-        return payload;
     }
 }

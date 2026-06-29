@@ -1,0 +1,3 @@
+ALTER TABLE note_collaborators DROP CONSTRAINT note_collaborators_note_id_key;
+ALTER TABLE note_collaborators DROP CONSTRAINT note_collaborators_user_id_key;
+ALTER TABLE note_collaborators ADD CONSTRAINT note_collaborators_pkey_composite UNIQUE (note_id, user_id);

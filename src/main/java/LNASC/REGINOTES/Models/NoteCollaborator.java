@@ -1,10 +1,13 @@
 package LNASC.REGINOTES.Models;
 
-import LNASC.REGINOTES.Models.Enums.NoteRole;
+import LNASC.REGINOTES.Util.Enums.NoteRole;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcType;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -22,6 +25,7 @@ public class NoteCollaborator {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     private NoteRole role;
     @Column(name = "added_at",nullable = false)
     private Instant addedAt;

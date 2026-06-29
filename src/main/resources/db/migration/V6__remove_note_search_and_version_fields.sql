@@ -1,0 +1,5 @@
+ALTER TABLE notes DROP COLUMN IF EXISTS version;
+ALTER TABLE notes DROP COLUMN IF EXISTS search_status;
+ALTER TABLE notes DROP COLUMN IF EXISTS indexed_at;
+
+DROP TYPE IF EXISTS search_status;

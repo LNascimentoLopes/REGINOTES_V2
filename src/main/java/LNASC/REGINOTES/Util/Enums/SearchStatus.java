@@ -1,4 +1,4 @@
-package LNASC.REGINOTES.Models.Enums;
+package LNASC.REGINOTES.Util.Enums;
 
 public enum SearchStatus {
     PENDING,

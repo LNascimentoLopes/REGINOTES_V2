@@ -1,7 +1,7 @@
 package LNASC.REGINOTES.RabbitMQ;
 
 import LNASC.REGINOTES.Config.RabbitMQConfig;
-import LNASC.REGINOTES.DTOs.WorkspaceDTOs.*;
+import LNASC.REGINOTES.DTOs.NotificationDTOs.*;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;

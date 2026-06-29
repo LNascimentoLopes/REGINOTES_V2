@@ -1,0 +1,1 @@
+ALTER TABLE notes ALTER COLUMN workspace_id DROP NOT NULL;

@@ -1,6 +1,6 @@
 package LNASC.REGINOTES.Models;
 
-import LNASC.REGINOTES.Models.Enums.NotificationType;
+import LNASC.REGINOTES.Util.Enums.NotificationType;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;

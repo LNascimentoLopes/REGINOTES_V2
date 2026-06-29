@@ -1,6 +1,7 @@
 package LNASC.REGINOTES.DTOs;
 
-import LNASC.REGINOTES.Models.Enums.WorkspaceRole;
+import LNASC.REGINOTES.Util.Enums.WorkspaceRole;
+import LNASC.REGINOTES.Util.EmailInvitePattern;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -51,13 +52,7 @@ public class WorkspaceDTOs {
             String email,
             @Schema(example = "VIEWER")
             WorkspaceRole role
-    ){}
-    public record InviteEmailPayloadDTO(
-            String email,
-            String userName,
-            String workspaceName,
-            UUID workspaceId
-    ){}
+    ) implements EmailInvitePattern<WorkspaceRole>{}
     public record UpdateMemberRoleRequestDTO(
             @Schema(example = "123e4567-e89b-12d3-a456-426614174000")
             UUID userId,
