@@ -4,6 +4,7 @@ import LNASC.REGINOTES.DTOs.NoteDTOs.*;
 import LNASC.REGINOTES.Security.CustomUserDetails;
 import LNASC.REGINOTES.Services.NoteService;
 import LNASC.REGINOTES.Services.NotificationsService;
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,14 +21,16 @@ import java.util.UUID;
 @Tag(name = "Notes")
 public class NoteController {
 
+    // DEPENDENCIES ----------------------------------------------------------------------------------
 
     @Autowired
     private NoteService service;
     @Autowired
     private NotificationsService notificationsService;
 
+    // OWNER NOTES -----------------------------------------------------------------------------------
 
-    // Notes that you OWN
+    @Operation(summary = "Create a note")
     @PostMapping()
     public ResponseEntity<Void> createNote(
             @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -35,6 +38,8 @@ public class NoteController {
         service.createNote(userDetails,request);
         return ResponseEntity.ok().build();
     }
+
+    @Operation(summary = "Get all owned orphan notes")
     @GetMapping()
     public ResponseEntity<Page<GetNoteResponseDTO>> getOrphanNotes(
             @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -42,6 +47,8 @@ public class NoteController {
 
         return ResponseEntity.ok().body(service.getOrphanNotes(userDetails,pageable));
     }
+
+    @Operation(summary = "Get an owned orphan note by id")
     @GetMapping("{id}")
     public ResponseEntity<GetNoteResponseDTO> getOrphanNotesById(
             @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -49,25 +56,29 @@ public class NoteController {
 
         return ResponseEntity.ok().body(service.getOrphanNoteById(userDetails,id));
     }
-    @PatchMapping("{id}")
+
+    @Operation(summary = "Update an owned orphan note by id")
+    @PutMapping("{id}")
     public ResponseEntity<Void> updateOrphanNote(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable UUID id){
 
         return ResponseEntity.ok().build();
     }
-    // Orphan notes that are collaborated
 
+    // COLLAB ORPHAN NOTES ---------------------------------------------------------------------------
 
+    @Operation(summary = "Invite a collaborator to an orphan note by email/notification")
     @PostMapping("{noteId}/invites")
     public ResponseEntity<Void> inviteToNote(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @PathVariable UUID noteId,
-            @RequestBody InviteCollabRequestDTO request){
+            @PathVariable UUID noteId, @RequestBody InviteCollabRequestDTO request){
         notificationsService.inviteToNote(noteId,request,userDetails.getUser());
         return ResponseEntity.ok().build();
 
     }
+
+    @Operation(summary = "Accept invite to a orphan note collab")
     @PostMapping("{noteId}/invites/accept")
     public ResponseEntity<Void> acceptInviteToNote(
             @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -76,6 +87,8 @@ public class NoteController {
         return ResponseEntity.ok().build();
 
     }
+
+    @Operation(summary = "Get all collab orphan notes")
     @GetMapping("collab")
     public ResponseEntity<Page<GetNoteResponseDTO>> getCollabOrphanNotes(
             @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -83,6 +96,8 @@ public class NoteController {
 
         return ResponseEntity.ok().body(service.getCollabOrphanNotes(userDetails,pageable));
     }
+
+    @Operation(summary = "Get a collab orphan note by id")
     @GetMapping("collab/{id}")
     public ResponseEntity<GetNoteResponseDTO> getCollabOrphanNotesById(
             @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -91,7 +106,9 @@ public class NoteController {
         return ResponseEntity.ok().body(service.getCollabOrphanNoteById(userDetails,id));
     }
 
-    // Notes that are collaborated inside a workspace
+    // COLLAB WORKSPACE NOTES ------------------------------------------------------------------------
+
+    @Operation(summary = "Get all notes from a workspace")
     @GetMapping("workspaces/{workId}")
     public ResponseEntity<Page<GetNoteResponseDTO>> getCollabNotes(
             @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -100,6 +117,8 @@ public class NoteController {
 
         return ResponseEntity.ok().body(service.getCollabNotes(userDetails,workId,pageable));
     }
+
+    @Operation(summary = "Get a note from a workspace by id")
     @GetMapping("workspaces/{workId}/{noteId}")
     public ResponseEntity<GetNoteResponseDTO> getCollabNotes(
             @AuthenticationPrincipal CustomUserDetails userDetails,
