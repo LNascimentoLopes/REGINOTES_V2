@@ -26,7 +26,7 @@ public class NoteMapper {
 
         return note;
     }
-    public Note DtoToUpdateNote(UpdateNoteRequestDTO request,Note note, CustomUserDetails userDetails){
+    public Note DtoToUpdateNote(UpdateNoteRequestDTO request,Note note){
         request.title().ifPresent(note::setTitle);
         request.content().ifPresent(content -> note.setContent(content.toString()));
         request.isPinned().ifPresent(note::setIsPinned);

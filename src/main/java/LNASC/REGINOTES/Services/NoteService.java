@@ -23,6 +23,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.ObjectMapper;
 
+import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -77,18 +78,36 @@ public class NoteService {
     public void updateNote(CustomUserDetails userDetails, UpdateNoteRequestDTO request, UUID noteId){
 
         Note note= repository.findNoteById(noteId).orElseThrow(() -> new NotFoundException("Note not found"));
-        
-        if (note.getWorkspaceNote() != null){
-            
-        } else if (note.getCollaborators().size() != 1) {
-            NoteCollaborator collaborator = noteCollabRepository.findCollabByUserId(noteId, userDetails.getUserId()).orElseThrow(() -> new ForbiddenException("Collaborator not found"));
-            if (collaborator.getRole().getLevel() > 1){
-                System.out.println("okay");
-            }else {
+
+        if (note.getWorkspaceNote() != null) {
+            WorkspaceMember member = memberRepository.findMemberByWorkspaceAndId(
+                            note.getWorkspaceNote().getId(), userDetails.getUserId())
+                    .orElseThrow(() -> new NotFoundException("Member not found"));
+            if (member.getRole().getLevel() <= WorkspaceRole.VIEWER.getLevel()) {
                 throw new ForbiddenException("Permission level too low");
             }
-
+        } else {
+            NoteCollaborator collaborator = noteCollabRepository.findCollabByUserId(noteId, userDetails.getUserId())
+                    .orElseThrow(() -> new ForbiddenException("Collaborator not found"));
+            if (collaborator.getRole().getLevel() <= NoteRole.VIEWER.getLevel()) {
+                throw new ForbiddenException("Permission level too low");
+            }
         }
+
+        repository.save(mapper.DtoToUpdateNote(request, note));
+    }
+
+    @Transactional
+    public void softDeleteNote(CustomUserDetails userDetails, UUID noteId){
+
+        NoteCollaborator collaborator = noteCollabRepository.findCollabByUserId(userDetails.getUserId(), noteId)
+                .orElseThrow(() -> new NotFoundException("Member not Found"));
+        if (collaborator.getRole().getLevel() == NoteRole.OWNER.getLevel()){
+            repository.softDeleteById(noteId, Instant.now());
+        }else {
+            throw new ForbiddenException("Permission level too low");
+        }
+
     }
 
     // Orphan, No collab, Services -------------------------------------------------------------------------------------------------------------

@@ -29,7 +29,7 @@ public class NoteController {
     @Autowired
     private NotificationsService notificationsService;
 
-    // OWNER NOTES -----------------------------------------------------------------------------------
+    // GENERAL ---------------------------------------------------------------------------------------
 
     @Operation(summary = "Create a note")
     @PostMapping()
@@ -39,6 +39,28 @@ public class NoteController {
         service.createNote(userDetails,request);
         return ResponseEntity.ok().build();
     }
+
+    @Operation(summary = "Update an owned orphan note by id")
+    @PatchMapping("{id}")
+    public ResponseEntity<Void> updateNote(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @Valid @RequestBody UpdateNoteRequestDTO request,
+            @PathVariable UUID id){
+        service.updateNote(userDetails,request,id);
+
+        return ResponseEntity.ok().build();
+    }
+    @Operation(summary = "Soft delete a note")
+    @DeleteMapping("id")
+    public ResponseEntity<Void> deleteNote(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable UUID id){
+        service.softDeleteNote(userDetails,id);
+        return ResponseEntity.ok().build();
+    }
+
+
+    // OWNER NOTES -----------------------------------------------------------------------------------
 
     @Operation(summary = "Get all owned orphan notes")
     @GetMapping()
@@ -58,15 +80,6 @@ public class NoteController {
         return ResponseEntity.ok().body(service.getOrphanNoteById(userDetails,id));
     }
 
-    @Operation(summary = "Update an owned orphan note by id")
-    @PatchMapping("{id}")
-    public ResponseEntity<Void> updateOrphanNote(
-            @AuthenticationPrincipal CustomUserDetails userDetails,
-            @Valid @RequestBody UpdateNoteRequestDTO request,
-            @PathVariable UUID id){
-
-        return ResponseEntity.ok().build();
-    }
 
     // COLLAB ORPHAN NOTES ---------------------------------------------------------------------------
 

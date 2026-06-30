@@ -5,9 +5,11 @@ import io.lettuce.core.dynamic.annotation.Param;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -43,5 +45,9 @@ public interface NoteRepository extends JpaRepository<Note, UUID> {
 
     @Query("SELECT n FROM Note n WHERE n.noteOwner.id =:ownerId AND n.deletedAt IS NULL AND n.parentNote IS NULL AND n.workspaceNote IS NULL")
     Page<Note> findNoteByOwnerID(@Param("ownerId")UUID ownerId, Pageable pageable);
+
+    @Modifying
+    @Query("UPDATE Note n SET deletedAt =:now WHERE n.id =:noteId")
+    void softDeleteById(@Param("noteId") UUID noteId, @Param("now")Instant now);
 
 }
