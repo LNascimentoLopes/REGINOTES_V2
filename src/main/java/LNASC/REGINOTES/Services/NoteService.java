@@ -23,10 +23,13 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.ObjectMapper;
 
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
 public class NoteService {
+
+    // Dependencies ----------------------------------------------------------------------------------------------------------------------------
 
     @Autowired
     private NoteRepository repository;
@@ -43,28 +46,60 @@ public class NoteService {
     @Autowired
     private ObjectMapper objMapper;
 
-    //Orphan, no collab, services
+    // All Notes -------------------------------------------------------------------------------------------------------------------------------
 
     @Transactional
-    public void createNote(CustomUserDetails userDetails, CreateNoteRequestDTO request){
-        if (request.workspaceId().isPresent()){
+    public void createNote(CustomUserDetails userDetails, CreateNoteRequestDTO request) {
+
+        Workspace workspace = null;
+        if (request.workspaceId().isPresent()) {
             WorkspaceMember member = memberRepository.findMemberByWorkspaceAndId(
-                    request.workspaceId().get(), userDetails.getUserId()).orElseThrow(() -> new NotFoundException("Member not found"));
+                            request.workspaceId().get(), userDetails.getUserId())
+                    .orElseThrow(() -> new NotFoundException("Member not found"));
+
             if (member.getRole().getLevel() < WorkspaceRole.EDITOR.getLevel()) {
                 throw new ForbiddenException("You dont have permission to create a note on this workspace");
             }
-        }
-        Note note = mapper.DTOtoNoteEntity(request, userDetails);
 
-        repository.save(note);
+            workspace = member.getCollabWorkspace();
+        }
+
+        Note parentNote = request.parentId()
+                .map(id -> repository.findNoteById(id).orElseThrow(() -> new NotFoundException("Note not found")))
+                .orElse(null);
+
+        Note mapped = mapper.DtoToNoteEntity(request, userDetails, parentNote, workspace);
+
+        repository.save(mapped);
     }
+    
+    @Transactional
+    public void updateNote(CustomUserDetails userDetails, UpdateNoteRequestDTO request, UUID noteId){
+
+        Note note= repository.findNoteById(noteId).orElseThrow(() -> new NotFoundException("Note not found"));
+        
+        if (note.getWorkspaceNote() != null){
+            
+        } else if (note.getCollaborators().size() != 1) {
+            NoteCollaborator collaborator = noteCollabRepository.findCollabByUserId(noteId, userDetails.getUserId()).orElseThrow(() -> new ForbiddenException("Collaborator not found"));
+            if (collaborator.getRole().getLevel() > 1){
+                System.out.println("okay");
+            }else {
+                throw new ForbiddenException("Permission level too low");
+            }
+
+        }
+    }
+
+    // Orphan, No collab, Services -------------------------------------------------------------------------------------------------------------
 
     public Page<GetNoteResponseDTO> getOrphanNotes (CustomUserDetails userDetails, Pageable pageable){
 
         Page<Note> notes = repository.findNoteByOwnerID(userDetails.getUserId(), pageable);
-        return notes.map(note -> mapper.NoteToDTO(note));
+        return notes.map(note -> mapper.NoteToDto(note));
 
     }
+
     public GetNoteResponseDTO getOrphanNoteById (CustomUserDetails userDetails , UUID noteId){
         String cacheKey = "notes:orphan:" +userDetails.getUserId() +":"+ noteId;
         String cache = redisTemplate.opsForValue().get(cacheKey);
@@ -76,16 +111,18 @@ public class NoteService {
         Note note = repository.findNoteByIdAndOwner(noteId, userDetails.getUserId())
                 .orElseThrow(() -> new NotFoundException("Note not found"));
 
-        return mapper.NoteToDTO(note);
+        return mapper.NoteToDto(note);
     }
-    //Orphan, collaborated , services
+
+    // Orphan, Collaborated , Services ---------------------------------------------------------------------------------------------------------
 
     public Page<GetNoteResponseDTO> getCollabOrphanNotes (CustomUserDetails userDetails, Pageable pageable){
 
         Page<Note> notes = repository.findCollabNotesByAffiliation(userDetails.getUserId(),pageable);
-        return notes.map(note -> mapper.NoteToDTO(note));
+        return notes.map(note -> mapper.NoteToDto(note));
 
     }
+
     public GetNoteResponseDTO getCollabOrphanNoteById (CustomUserDetails userDetails , UUID noteId){
         String cacheKey = "notes:orphanCollab:" +userDetails.getUserId() +":"+ noteId;
         String cache = redisTemplate.opsForValue().get(cacheKey);
@@ -97,7 +134,7 @@ public class NoteService {
         Note note = repository.findCollabNoteById(noteId, userDetails.getUserId())
                 .orElseThrow(() -> new NotFoundException("Note not found"));
 
-        return mapper.NoteToDTO(note);
+        return mapper.NoteToDto(note);
     }
 
     @Transactional
@@ -120,17 +157,16 @@ public class NoteService {
         redisTemplate.delete("invite:" + id + ":" + userDetails.getUserId());
     }
 
-
-
     public Page<GetNoteResponseDTO> getCollabNotes (CustomUserDetails userDetails,UUID workId ,Pageable pageable){
 
         if (memberRepository.findIfWorkspaceMemberByWorkspaceId(userDetails.getUserId(),workId)){
             Page<Note> notes = repository.findNoteByAssignedWorkspace(workId,pageable);
-            return notes.map(note -> mapper.NoteToDTO(note));
+            return notes.map(note -> mapper.NoteToDto(note));
         }else {
             throw new ForbiddenException("Permission insufficient");
         }
     }
+
     public GetNoteResponseDTO getCollabNoteById (CustomUserDetails userDetails , UUID noteId ,UUID workId){
 
         String cacheKey = "notes:collab:" + noteId +":"+workId;
@@ -142,11 +178,13 @@ public class NoteService {
 
         if (memberRepository.findIfWorkspaceMemberByWorkspaceId(userDetails.getUserId(),workId)){
             Note note = repository.findNoteByAssignedWorkspaceAndId(workId,noteId).orElseThrow(() -> new NotFoundException("Note not found"));
-            return mapper.NoteToDTO(note);
+            return mapper.NoteToDto(note);
         }else {
             throw new ForbiddenException("Permission insufficient");
         }
 
     }
+
+    // Workspace Notes -------------------------------------------------------------------------------------------------------------------------
 }
 

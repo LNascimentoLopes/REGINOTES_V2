@@ -13,6 +13,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 public class NoteDTOs {
+
     public record CreateNoteRequestDTO(
             @NotBlank
             String title,
@@ -33,7 +34,12 @@ public class NoteDTOs {
             Instant updatedAt,
             UUID ownerId
     ){}
-
+    public record UpdateNoteRequestDTO(
+            Optional<@NotBlank String> title,
+            @Schema(example = "{}")
+            Optional<JsonNode> content,
+            Optional<Boolean> isPinned
+    ){}
     public record InviteCollabRequestDTO (
             @Email
             @NotEmpty

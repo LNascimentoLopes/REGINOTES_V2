@@ -12,7 +12,6 @@ import java.util.UUID;
 @Component
 public class NotificationMapper {
 
-
     public inviteNotificationDTO NotificationToDTO(Notification notification){
 
         inviteNotificationDTO dto = new inviteNotificationDTO(
@@ -23,7 +22,6 @@ public class NotificationMapper {
                 notification.getRead(),
                 notification.getCreatedAt()
         );
-
         return dto;
     }
 

@@ -7,6 +7,7 @@ import LNASC.REGINOTES.Services.NotificationsService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -34,7 +35,7 @@ public class NoteController {
     @PostMapping()
     public ResponseEntity<Void> createNote(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestBody CreateNoteRequestDTO request){
+            @Valid @RequestBody CreateNoteRequestDTO request){
         service.createNote(userDetails,request);
         return ResponseEntity.ok().build();
     }
@@ -52,15 +53,16 @@ public class NoteController {
     @GetMapping("{id}")
     public ResponseEntity<GetNoteResponseDTO> getOrphanNotesById(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestParam UUID id){
+            @PathVariable UUID id){
 
         return ResponseEntity.ok().body(service.getOrphanNoteById(userDetails,id));
     }
 
     @Operation(summary = "Update an owned orphan note by id")
-    @PutMapping("{id}")
+    @PatchMapping("{id}")
     public ResponseEntity<Void> updateOrphanNote(
             @AuthenticationPrincipal CustomUserDetails userDetails,
+            @Valid @RequestBody UpdateNoteRequestDTO request,
             @PathVariable UUID id){
 
         return ResponseEntity.ok().build();
@@ -72,7 +74,7 @@ public class NoteController {
     @PostMapping("{noteId}/invites")
     public ResponseEntity<Void> inviteToNote(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @PathVariable UUID noteId, @RequestBody InviteCollabRequestDTO request){
+            @PathVariable UUID noteId, @Valid @RequestBody InviteCollabRequestDTO request){
         notificationsService.inviteToNote(noteId,request,userDetails.getUser());
         return ResponseEntity.ok().build();
 
@@ -101,7 +103,7 @@ public class NoteController {
     @GetMapping("collab/{id}")
     public ResponseEntity<GetNoteResponseDTO> getCollabOrphanNotesById(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestParam UUID id){
+            @PathVariable UUID id){
 
         return ResponseEntity.ok().body(service.getCollabOrphanNoteById(userDetails,id));
     }
@@ -112,7 +114,7 @@ public class NoteController {
     @GetMapping("workspaces/{workId}")
     public ResponseEntity<Page<GetNoteResponseDTO>> getCollabNotes(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestParam UUID workId,
+            @PathVariable UUID workId,
             @Parameter(hidden = true) Pageable pageable){
 
         return ResponseEntity.ok().body(service.getCollabNotes(userDetails,workId,pageable));
@@ -122,9 +124,11 @@ public class NoteController {
     @GetMapping("workspaces/{workId}/{noteId}")
     public ResponseEntity<GetNoteResponseDTO> getCollabNotes(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestParam("workId") UUID id,
-            @RequestParam("noteId") UUID noteId ){
+            @PathVariable("workId") UUID id,
+            @PathVariable("noteId") UUID noteId ){
 
         return ResponseEntity.ok().body(service.getCollabNoteById(userDetails,noteId,id));
     }
+
+    // -----------------------------------------------------------------------------------------------
 }

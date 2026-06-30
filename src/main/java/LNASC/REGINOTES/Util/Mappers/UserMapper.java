@@ -11,19 +11,16 @@ import org.springframework.stereotype.Component;
 @Component
 public class UserMapper {
 
-    @Autowired
-    private PasswordEncoder encoder;
-
-    public User UserDtoToEntity(RegisterRequestDTO request){
+    public User UserDtoToEntity(RegisterRequestDTO request, String hashed){
         User user = new User();
         user.setDisplayName(request.username());
         user.setEmail(request.email());
-        user.setPasswordHash(encoder.encode(request.password()));
+        user.setPasswordHash(hashed);
 
         return user;
     }
-    public GetUserResponseDTO EntityToGetUserResponse(User user){
 
+    public GetUserResponseDTO EntityToGetUserResponse(User user){
         return new GetUserResponseDTO(
                 user.getId(),
                 user.getDisplayName(),

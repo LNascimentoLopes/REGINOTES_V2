@@ -16,36 +16,27 @@ import java.util.List;
 @Component
 public class WorkspaceMapper {
 
-    @Autowired
-    private WorkspaceRepository repository;
-
-   public Workspace workspaceToEntity(WorkspaceCreateRequestDTO request, User user){
+   public Workspace workspaceToEntity(WorkspaceCreateRequestDTO request, User user , Workspace parent){
        Workspace workspace = new Workspace();
+
        workspace.setName(request.name());
        workspace.setDescription(request.description());
        request.iconUrl().ifPresent(workspace::setIconUrl);
        workspace.setSettings(request.settings() != null ? request.settings().toString() : null);
        workspace.setOwner(user);
-
-       request.parentId()
-               .ifPresent(id -> workspace
-                       .setParent(
-                       repository.findById(id)
-                               .orElseThrow(()-> new EntityNotFoundException("User not found"))));
+       workspace.setParent(parent);
 
        return workspace;
    }
 
-   public void updateEntity(UpdateWorkspaceRequestDTO request, User user, Workspace workspace){
+   public void updateEntity(UpdateWorkspaceRequestDTO request, Workspace workspace , Workspace parent){
        request.name().ifPresent(workspace::setName);
        request.description().ifPresent(workspace::setDescription);
        request.iconUrl().ifPresent(workspace::setIconUrl);
        workspace.setSettings(request.settings().map(Object::toString).orElse(null));
-       request.parentId()
-               .ifPresent(id -> workspace
-                       .setParent(
-                               repository.findById(id)
-                                       .orElseThrow(()-> new EntityNotFoundException("User not found"))));
+       if (parent != null){
+           workspace.setParent(null);
+       }
    }
 
    public GetWorkspacesResponseDTO entityToGetResponseDTO(Workspace workspace){

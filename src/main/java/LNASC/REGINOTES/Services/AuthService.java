@@ -52,7 +52,8 @@ public class AuthService {
         if (userRepository.findByEmail(request.email()).isPresent()){
             throw new EmailAlreadyInUserException("Email already registered");
         }
-        User user = userMapper.UserDtoToEntity(request);
+        String hashed = encoder.encode(request.password());
+        User user = userMapper.UserDtoToEntity(request,hashed);
         userRepository.save(user);
     }
     @Transactional

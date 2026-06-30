@@ -17,29 +17,42 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "Users")
 public class UserController {
 
+    // DEPENDENCIES --------------------------------------------------------------------------------------------------------------
+
     @Autowired
     private UserService service;
 
+    // USER  DATA ----------------------------------------------------------------------------------------------------------------
+
     @Operation(summary = "Get logged user data")
     @GetMapping()
-    public ResponseEntity<GetUserResponseDTO> getMe(@AuthenticationPrincipal CustomUserDetails user){
+    public ResponseEntity<GetUserResponseDTO> getMe(
+            @AuthenticationPrincipal CustomUserDetails user){
         return ResponseEntity.ok().body(service.getUserInfo(user));
     }
+
     @Operation(summary = "Deactivate Account")
     @DeleteMapping()
-    public ResponseEntity<Void> deactivateAccount (@AuthenticationPrincipal CustomUserDetails user){
+    public ResponseEntity<Void> deactivateAccount (
+            @AuthenticationPrincipal CustomUserDetails user){
         service.deactivateAccount(user);
         return ResponseEntity.ok().build();
     }
+
     @Operation(summary = "Update logged user data")
     @PatchMapping()
-    public ResponseEntity<Void> updateUser (@Valid @RequestBody UpdateUserRequestDTO request, @AuthenticationPrincipal CustomUserDetails user, HttpServletRequest httpServletRequest){
+    public ResponseEntity<Void> updateUser (
+            @Valid @RequestBody UpdateUserRequestDTO request,
+            @AuthenticationPrincipal CustomUserDetails user, HttpServletRequest httpServletRequest){
         service.updateUserData(user,request,httpServletRequest);
         return ResponseEntity.ok().build();
     }
+
     @Operation(summary = "Update password")
     @PatchMapping("password")
-    public ResponseEntity<Void> updatePassword (@AuthenticationPrincipal CustomUserDetails userDetails, @Valid @RequestBody UpdatePasswordRequestDTO request){
+    public ResponseEntity<Void> updatePassword (
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @Valid @RequestBody UpdatePasswordRequestDTO request){
         service.updateUserPassword(userDetails,request);
         return ResponseEntity.ok().build();
     }

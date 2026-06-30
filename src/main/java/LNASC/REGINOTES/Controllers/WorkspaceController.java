@@ -24,13 +24,16 @@ import java.util.UUID;
 @Tag(name = "Workspaces")
 public class WorkspaceController {
 
+    // DEPENDENCIES --------------------------------------------------------------------------------------------------
+
     @Autowired
     private WorkspaceService service;
     @Autowired
     private NotificationsService notificationsService;
 
 
-    //BASE MAPPINGS ----------------------------------------------------------------------------
+    // BASE MAPPINGS -------------------------------------------------------------------------------------------------
+
     @Operation(summary = "Create new Workspace")
     @PostMapping()
     public ResponseEntity<WorkspaceCreateRequestDTO> createNewWorkspace(
@@ -72,7 +75,7 @@ public class WorkspaceController {
         return ResponseEntity.ok().build();
     }
 
-    //TRASH MAPPINGS ---------------------------------------------------------------------------
+    // TRASH MAPPINGS ------------------------------------------------------------------------------------------------
 
     @Operation(summary = "Get all trashed workspaces")
     @GetMapping("trash")
@@ -105,7 +108,7 @@ public class WorkspaceController {
         return ResponseEntity.ok().build();
     }
 
-    //MEMBER MAPPINGS --------------------------------------------------------------------------
+    // MEMBER MAPPINGS -----------------------------------------------------------------------------------------------
 
     @Operation(summary = "Get all workspaces user is a member of")
     @GetMapping("affiliated")
@@ -165,7 +168,7 @@ public class WorkspaceController {
         return ResponseEntity.ok().build();
     }
 
-    //CHILDREN WORKSPACES ---------------------------------------------------------------------
+    // CHILDREN WORKSPACES -------------------------------------------------------------------------------------------
 
     @Operation(summary = "Get all children workspaces")
     @GetMapping("{id}/children")
@@ -184,5 +187,7 @@ public class WorkspaceController {
             @Parameter(hidden = true) Pageable pageable){
         return ResponseEntity.ok().body(service.getAllTrashedChildWorkspaces(userDetails,id,pageable)) ;
     }
+
+    // ---------------------------------------------------------------------------------------------------------------
 
 }

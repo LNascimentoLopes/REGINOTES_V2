@@ -22,8 +22,12 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "Authentication")
 public class AuthController {
 
+    // DEPENDENCIES ---------------------------------------------------------------------------------------------------------
+
     @Autowired
     private AuthService service;
+
+    // AUTHENTICATION -------------------------------------------------------------------------------------------------------
 
     @Operation(summary = "Register a new User")
     @PostMapping("register")
@@ -31,37 +35,49 @@ public class AuthController {
         service.registerUser(request);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
+
     @Operation(summary = "Login to an existing user")
     @PostMapping("login")
     public ResponseEntity<LoginResponseDTO> loginUser(@Valid @RequestBody LoginRequestDTO request){
         return ResponseEntity.ok().body(service.loginUser(request));
     }
+
     @Operation(summary = "Get a new JWT token")
     @PutMapping("refresh")
     public ResponseEntity<RefreshResponseDTO> refreshToken (@Valid @RequestBody RefreshRequestDTO request){
         return ResponseEntity.ok().body(service.refreshUser(request));
     }
+
+    // LOGOUT ----------------------------------------------------------------------------------------------------------------
+
     @Operation(summary = "Log out from account")
     @DeleteMapping("logout")
     public ResponseEntity<Void> logout (@AuthenticationPrincipal CustomUserDetails user, HttpServletRequest request){
         service.logout(user.getUser(),request);
         return ResponseEntity.ok().build();
     }
+
+    // PASSWORD RECOVER ------------------------------------------------------------------------------------------------------
+
     @Operation(summary = "Send code to email")
     @PostMapping("forgot-password")
     public ResponseEntity<Void> forgotPassword(@Valid @RequestBody ForgotPasswordRequestDTO request){
         service.generateRecoveryCode(request);
         return ResponseEntity.ok().build();
     }
+
     @Operation(summary = "Verify sent code")
     @PostMapping("verify-code")
     public ResponseEntity<VerifyCodeResponseDTO> verifyCodePassword(@Valid @RequestBody VerifyCodeRequestDTO request){
         return ResponseEntity.ok().body(service.verifyResetCode(request));
     }
+
     @Operation(summary = "Reset your password")
     @PostMapping("reset-password")
     public ResponseEntity<Void> resetPassword( @Valid @RequestBody ResetPasswordRequestDTO request){
         service.alterPasswordByRecoverCode(request);
         return ResponseEntity.ok().build();
     }
+
+    //------------------------------------------------------------------------------------------------------------------------
 }

@@ -26,6 +26,8 @@ import java.util.UUID;
 @Service
 public class WorkspaceService {
 
+    // Base Workspace Services -------------------------------------------------------------------------------------------------------------
+
     @Autowired
     private WorkspaceRepository repository;
     @Autowired
@@ -38,19 +40,22 @@ public class WorkspaceService {
     private ObjectMapper objMapper;
 
 
-    //Base Workspace Services
+    // Base Workspace Services -------------------------------------------------------------------------------------------------------------
 
     @Transactional
     public void createWorkspace(CustomUserDetails user, WorkspaceCreateRequestDTO request){
+        Workspace parent = request.parentId()
+                .map(id -> repository.findWorkspaceById(id)
+                        .orElseThrow(() -> new NotFoundException("Workspace not found"))).orElse(null);
 
-
-        repository.save(mapper.workspaceToEntity(request,user.getUser()));
+        repository.save(mapper.workspaceToEntity(request,user.getUser(),parent));
     }
 
     public Page<GetWorkspacesResponseDTO> getAllOwnedWorkspaces(CustomUserDetails userDetails, Pageable pageable){
         Page<Workspace> workspaces = repository.findWorkspacesByOwner(userDetails.getUserId(), pageable);
         return workspaces.map(work -> mapper.entityToGetResponseDTO(work));
     }
+
     public Page<GetWorkspacesResponseDTO> getAllMemberWorkspaces(CustomUserDetails userDetails, Pageable pageable){
         Page<Workspace> workspacesByAffiliation = repository.findWorkspacesByAffiliation(userDetails.getUserId(), pageable);
         return workspacesByAffiliation.map(workspace -> mapper.entityToGetResponseDTO(workspace));
@@ -67,14 +72,21 @@ public class WorkspaceService {
         Workspace workspace = repository.findWorkspaceByIdAndUserId(id, userDetails.getUserId()).orElseThrow(() -> new NotFoundException("workspace not found"));
         return mapper.entityToGetResponseDTO(workspace);
     }
+
     @Transactional
     public void updateWorkspaceById (CustomUserDetails user, UUID id, UpdateWorkspaceRequestDTO request){
         String cacheKey = "workspaces:" + user.getUserId() + ":" + id;
         redisTemplate.delete(cacheKey);
 
+        Workspace parent = request.parentId().map(parentId ->
+                repository.findWorkspaceById(parentId)
+                        .orElseThrow(() -> new NotFoundException("Workspace not found")))
+                .orElse(null);
+
         Workspace workspace = repository.findWorkspaceByIdAndUserId(id, user.getUserId()).orElseThrow(() -> new EntityNotFoundException("User not found"));
-        mapper.updateEntity(request,user.getUser(),workspace);
+        mapper.updateEntity(request,workspace,parent);
     }
+
     @Transactional
     public void softDeleteWorkspaceById(CustomUserDetails userDetails, UUID id){
         String cacheKey = "workspaces:" + userDetails.getUserId() + ":" + id;
@@ -90,16 +102,18 @@ public class WorkspaceService {
 
     }
 
-    //Trash Workspace Services
+    // Trash Workspace Services -------------------------------------------------------------------------------------------------------------
 
     public GetWorkspacesResponseDTO getTrashedWorkspaceById(CustomUserDetails userDetails, UUID id){
         Workspace workspace = repository.findTrashedWorkspaceById(id, userDetails.getUserId()).orElseThrow(() -> new NotFoundException("workspace not found"));
         return mapper.entityToGetResponseDTO(workspace);
     }
+
     public Page<GetWorkspacesResponseDTO> getAllTrashedWorkspaces(CustomUserDetails userDetails, Pageable pageable) {
         Page<Workspace> workspaces = repository.findTrashedWorkspacesByOwner(userDetails.getUserId(), pageable);
         return workspaces.map(work -> mapper.entityToGetResponseDTO(work));
     }
+
     @Transactional
     public void recoverTrashWorkspaceById(CustomUserDetails userDetails, UUID id){
         int updated = repository.restoreByWorkspaceId(id, userDetails.getUserId());
@@ -107,6 +121,7 @@ public class WorkspaceService {
             throw new NotFoundException("Workspace Not Found");
         }
     }
+
     @Transactional
     public void hardDeleteWorkspaceById(CustomUserDetails userDetails, UUID id){
         int updated = repository.restoreByWorkspaceId(id, userDetails.getUserId());
@@ -115,7 +130,8 @@ public class WorkspaceService {
         }
     }
 
-    //member services
+    // Member Services ----------------------------------------------------------------------------------------------------------------------
+
     @Transactional
     public void addMemberByInvite(CustomUserDetails userDetails,UUID id){
         String role = redisTemplate.opsForValue().get("invite:" + id + ":" + userDetails.getUserId());
@@ -153,6 +169,7 @@ public class WorkspaceService {
         }
 
     }
+
     public List<GetWorkspaceMembersResponseDTO> getWorkspaceMembers (CustomUserDetails userDetails, UUID workId){
 
         List<WorkspaceMember> members = memberRepository.findMemberByWorkspace(workId);
@@ -165,6 +182,7 @@ public class WorkspaceService {
             throw new ForbiddenException("User not permitted");
         }
     }
+
     @Transactional
     public void deleteMemberFromWorkspace(CustomUserDetails userDetails, UUID workId, UUID memberId){
         WorkspaceMember member = memberRepository.findMemberByWorkspaceAndId(workId, memberId).orElseThrow(() -> new NotFoundException("Membership not found"));
@@ -175,7 +193,8 @@ public class WorkspaceService {
             throw new ForbiddenException("Permission Level Insufficient");
         }
     }
-    // children workspaces
+
+    // Children Workspaces ------------------------------------------------------------------------------------------------------------------
 
     public Page<GetWorkspacesResponseDTO> getAllChildWorkspaces(CustomUserDetails userDetails,UUID id, Pageable pageable){
         if (memberRepository.findIfWorkspaceMemberByWorkspaceId(userDetails.getUserId(), id)){
@@ -185,6 +204,7 @@ public class WorkspaceService {
             throw new ForbiddenException("Access Level Insufficient");
         }
     }
+
     public Page<GetWorkspacesResponseDTO> getAllTrashedChildWorkspaces(CustomUserDetails userDetails,UUID id, Pageable pageable){
         if (memberRepository.findIfWorkspaceMemberByWorkspaceId(userDetails.getUserId(), id)){
             Page<Workspace> workspaces = repository.findTrashChildrenWorkspaces(id, pageable);
