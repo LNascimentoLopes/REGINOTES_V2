@@ -13,6 +13,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.parameters.P;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -51,14 +52,13 @@ public class NoteController {
         return ResponseEntity.ok().build();
     }
     @Operation(summary = "Soft delete a note")
-    @DeleteMapping("id")
+    @DeleteMapping("{id}")
     public ResponseEntity<Void> deleteNote(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable UUID id){
         service.softDeleteNote(userDetails,id);
         return ResponseEntity.ok().build();
     }
-
 
     // OWNER NOTES -----------------------------------------------------------------------------------
 
@@ -114,11 +114,29 @@ public class NoteController {
 
     @Operation(summary = "Get a collab orphan note by id")
     @GetMapping("collab/{id}")
-    public ResponseEntity<GetNoteResponseDTO> getCollabOrphanNotesById(
+    public ResponseEntity<GetNoteResponseDTO> getCollabNoteById (
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable UUID id){
-
         return ResponseEntity.ok().body(service.getCollabOrphanNoteById(userDetails,id));
+    }
+
+    @Operation(summary = "Change role of a collaborator note by id")
+    @PatchMapping ("collab/{noteId}/{collabId}")
+    public ResponseEntity<Void> updateCollaboratorRole(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @Valid @RequestBody UpdateCollabRoleRequestDTO request,
+            @PathVariable("noteId") UUID noteId, @PathVariable("collabId") UUID collabId){
+        service.updateCollaboratorRoleById(userDetails,collabId,noteId,request);
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "Remove a collaborator from a note")
+    @DeleteMapping("collab/{noteId}/{collabId}")
+    public ResponseEntity<Void> deleteCollaboratorById (
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable("noteId") UUID noteId, @PathVariable("collabId") UUID collabId){
+        service.removeCollaborator(userDetails,noteId,collabId);
+        return ResponseEntity.ok().build();
     }
 
     // COLLAB WORKSPACE NOTES ------------------------------------------------------------------------
@@ -141,6 +159,47 @@ public class NoteController {
             @PathVariable("noteId") UUID noteId ){
 
         return ResponseEntity.ok().body(service.getCollabNoteById(userDetails,noteId,id));
+    }
+
+    // TRASHED NOTES ---------------------------------------------------------------------------------
+
+    @Operation(summary = "Get all trashed notes")
+    @GetMapping("trash")
+    public ResponseEntity<Page<GetNoteResponseDTO>> getTrashedNotes(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @Parameter(hidden = true) Pageable pageable){
+
+        return ResponseEntity.ok().body(service.getTrashedNotes(userDetails,pageable));
+    }
+
+    @Operation(summary = "Restore note")
+    @PatchMapping("trash/{id}")
+    public ResponseEntity<GetNoteResponseDTO> restoreTrashedNoteById(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable UUID id){
+        service.restoreTrashedNote(userDetails,id);
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "Delete note permanently")
+    @DeleteMapping("trash/{id}")
+    public ResponseEntity<Void> hardDeleteNote(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable UUID id){
+        service.hardDeleteNote(userDetails,id);
+        return ResponseEntity.ok().build();
+    }
+
+    // CHILDREN NOTES --------------------------------------------------------------------------------
+
+    @Operation(summary = "Get all notes that have a parent note")
+    @GetMapping("children/{id}")
+    public ResponseEntity<Page<GetNoteResponseDTO>> getChildrenNotes(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable UUID id,
+            @Parameter(hidden = true) Pageable pageable){
+
+        return ResponseEntity.ok().body(service.getChildrenNotes(userDetails,pageable,id));
     }
 
     // -----------------------------------------------------------------------------------------------

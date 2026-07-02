@@ -24,6 +24,9 @@ public interface NoteRepository extends JpaRepository<Note, UUID> {
     @Query("SELECT n FROM Note n WHERE n.id =:noteId AND n.deletedAt IS NULL")
     Optional<Note> findNoteById(@Param("noteId")UUID noteId);
 
+    @Query("SELECT n FROM Note n WHERE n.id =:noteId AND n.deletedAt IS NOT NULL")
+    Optional<Note> findTrashedNoteById(@Param("noteId")UUID noteId);
+
     @Query("SELECT n FROM Note n WHERE n.id =:noteId AND n.noteOwner.id =:userId AND n.deletedAt IS NULL")
     Optional<Note> findNoteByIdAndOwner(@Param("noteId")UUID noteId, @Param("userId") UUID userId);
 
@@ -46,8 +49,18 @@ public interface NoteRepository extends JpaRepository<Note, UUID> {
     @Query("SELECT n FROM Note n WHERE n.noteOwner.id =:ownerId AND n.deletedAt IS NULL AND n.parentNote IS NULL AND n.workspaceNote IS NULL")
     Page<Note> findNoteByOwnerID(@Param("ownerId")UUID ownerId, Pageable pageable);
 
+    @Query(value = "SELECT n FROM Note n LEFT JOIN n.collaborators nc WHERE nc.noteGuest.id = :userId AND nc.role = 'OWNER' AND n.deletedAt IS NOT NULL",
+            countQuery = "SELECT COUNT(n) FROM Note n LEFT JOIN n.collaborators nc WHERE nc.noteGuest.id = :userId AND nc.role = 'OWNER' AND n.deletedAt IS NOT NULL")
+    Page<Note> findAllTrashedNotes(@Param("userId") UUID userId, Pageable pageable);
+
     @Modifying
     @Query("UPDATE Note n SET deletedAt =:now WHERE n.id =:noteId")
     void softDeleteById(@Param("noteId") UUID noteId, @Param("now")Instant now);
+
+    @Modifying
+    @Query("DELETE Note n WHERE n.id =:noteId AND n.deletedAt IS NOT NULL")
+    void hardDeleteById(@Param("noteId") UUID noteId);
+
+
 
 }

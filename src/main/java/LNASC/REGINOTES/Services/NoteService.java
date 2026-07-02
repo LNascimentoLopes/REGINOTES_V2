@@ -20,6 +20,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.ObjectMapper;
 
@@ -110,6 +111,17 @@ public class NoteService {
 
     }
 
+    // Children, Notes, Services -------------------------------------------------------------------------------------------------------------
+
+    public Page<GetNoteResponseDTO> getChildrenNotes (CustomUserDetails userDetails, Pageable pageable , UUID id){
+        if (noteCollabRepository.findIfUserCollaborator(userDetails.getUserId(), id)){
+            Page<Note> notes = repository.findChildrenNotes(id,pageable);
+            return notes.map(note -> mapper.NoteToDto(note));
+        }else {
+            throw new ForbiddenException("Permission denied");
+        }
+    }
+
     // Orphan, No collab, Services -------------------------------------------------------------------------------------------------------------
 
     public Page<GetNoteResponseDTO> getOrphanNotes (CustomUserDetails userDetails, Pageable pageable){
@@ -157,6 +169,21 @@ public class NoteService {
     }
 
     @Transactional
+    public void updateCollaboratorRoleById (CustomUserDetails userDetails, UUID collabId, UUID noteId, UpdateCollabRoleRequestDTO request){
+        NoteCollaborator updater = noteCollabRepository.findCollabByUserId(userDetails.getUserId(), noteId)
+                .orElseThrow(() -> new NotFoundException("member not found"));
+        NoteCollaborator collaborator = noteCollabRepository.findCollabByUserId(collabId,noteId)
+                .orElseThrow(() -> new NotFoundException("member not found"));
+
+        if (updater.getRole().getLevel() > request.role().getLevel() &&
+                updater.getRole().getLevel() > collaborator.getRole().getLevel()){
+            collaborator.setRole(request.role());
+        }else {
+            throw new ForbiddenException ("Permission level too low");
+        }
+    }
+
+    @Transactional
     public void addCollaboratorByInvite(CustomUserDetails userDetails, UUID id){
         String role = redisTemplate.opsForValue().get("invite:" + id + ":" + userDetails.getUserId());
 
@@ -175,6 +202,24 @@ public class NoteService {
 
         redisTemplate.delete("invite:" + id + ":" + userDetails.getUserId());
     }
+
+    @Transactional
+    public void removeCollaborator(CustomUserDetails userDetails,UUID noteId, UUID targetId){
+
+        NoteCollaborator deleter = noteCollabRepository.findCollabByUserId(userDetails.getUserId(), noteId)
+                .orElseThrow(() -> new NotFoundException("member not found"));
+        NoteCollaborator collaborator = noteCollabRepository.findCollabByUserId(targetId,noteId)
+                .orElseThrow(() -> new NotFoundException("member not found"));
+
+        if (deleter.getRole().getLevel() > collaborator.getRole().getLevel() || deleter.equals(collaborator)){
+            noteCollabRepository.delete(collaborator);
+        }else {
+            throw new ForbiddenException ("Permission level too low");
+        }
+
+    }
+
+    // Workspace Notes Services ----------------------------------------------------------------------------------------------------------------
 
     public Page<GetNoteResponseDTO> getCollabNotes (CustomUserDetails userDetails,UUID workId ,Pageable pageable){
 
@@ -204,6 +249,33 @@ public class NoteService {
 
     }
 
-    // Workspace Notes -------------------------------------------------------------------------------------------------------------------------
+    // Trashed notes Services ------------------------------------------------------------------------------------------------------------------
+
+    public Page<GetNoteResponseDTO> getTrashedNotes (CustomUserDetails userDetails, Pageable pageable){
+            Page<Note> notes = repository.findAllTrashedNotes(userDetails.getUserId(),pageable);
+            return notes.map(note -> mapper.NoteToDto(note));
+    }
+
+    @Transactional
+    public void restoreTrashedNote(CustomUserDetails userDetails, UUID noteId){
+        Note note = repository.findTrashedNoteById(noteId).orElseThrow(() -> new NotFoundException("Note not found"));
+        note.setDeletedAt(null);
+        repository.save(note);
+    }
+
+    @Transactional
+    public void hardDeleteNote(CustomUserDetails userDetails, UUID noteId){
+        NoteCollaborator collaborator = noteCollabRepository.findCollabByUserId(userDetails.getUserId(), noteId)
+                .orElseThrow(() -> new NotFoundException("Member not Found"));
+        if (collaborator.getRole().getLevel() == NoteRole.OWNER.getLevel()){
+            repository.hardDeleteById(noteId);
+        }else {
+            throw new ForbiddenException("Permission level too low");
+        }
+    }
+
+
+    // -----------------------------------------------------------------------------------------------------------------------------------------
+
 }
 
