@@ -2,7 +2,6 @@ package LNASC.REGINOTES.RabbitMQ;
 
 import LNASC.REGINOTES.Config.RabbitMQConfig;
 import LNASC.REGINOTES.DTOs.NotificationDTOs.InviteEmailPayloadDTO;
-import LNASC.REGINOTES.DTOs.WorkspaceDTOs.*;
 import LNASC.REGINOTES.Services.EmailService;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.beans.factory.annotation.Autowired;

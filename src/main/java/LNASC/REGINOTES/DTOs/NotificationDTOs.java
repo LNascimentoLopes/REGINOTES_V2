@@ -7,7 +7,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 public class NotificationDTOs {
-    public record inviteNotificationDTO(
+    public record InviteNotificationDTO(
             UUID id,
             NotificationType Type,
             String message,
@@ -21,5 +21,13 @@ public class NotificationDTOs {
             String Name,
             UUID Id,
             InviteType type
+    ){}
+    public record GetNotificationResponseDTO(
+            UUID id,
+            NotificationType type,
+            String payload,
+            Boolean read,
+            Instant createdAt
+
     ){}
 }

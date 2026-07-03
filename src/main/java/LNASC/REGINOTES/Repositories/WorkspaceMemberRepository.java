@@ -26,4 +26,7 @@ public interface WorkspaceMemberRepository extends JpaRepository<WorkspaceMember
     @Query("SELECT COUNT(wm) > 0 FROM WorkspaceMember wm WHERE wm.workspaceGuest.id =:userId AND wm.collabWorkspace.id =:workspaceId AND wm.collabWorkspace.deletedAt IS NULL")
     Boolean findIfWorkspaceMemberByWorkspaceId(@Param("userId")UUID userId, @Param("workspaceId") UUID workspaceId);
 
+    @Query("SELECT wm FROM WorkspaceMember wm WHERE wm.collabWorkspace.id =:workspaceId AND wm.role != 'VIEWER' AND wm.workspaceGuest.id =:userId")
+    Optional<WorkspaceMember> findMemberEditorByWorkspaceAndId (@Param("workspaceId")UUID workspaceId, @Param("userId") UUID userId);
+
 }

@@ -6,6 +6,7 @@ import LNASC.REGINOTES.DTOs.WorkspaceDTOs.*;
 import LNASC.REGINOTES.Exceptions.ForbiddenException;
 import LNASC.REGINOTES.Exceptions.NotFoundException;
 import LNASC.REGINOTES.Models.*;
+import LNASC.REGINOTES.Security.CustomUserDetails;
 import LNASC.REGINOTES.Util.Enums.InviteType;
 import LNASC.REGINOTES.Util.Enums.NoteRole;
 import LNASC.REGINOTES.Util.Enums.NotificationType;
@@ -13,7 +14,10 @@ import LNASC.REGINOTES.Util.Enums.WorkspaceRole;
 import LNASC.REGINOTES.RabbitMQ.EmailProducer;
 import LNASC.REGINOTES.Repositories.*;
 import LNASC.REGINOTES.Util.Mappers.NotificationMapper;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
@@ -23,6 +27,8 @@ import java.util.UUID;
 
 @Service
 public class NotificationsService {
+
+    // Dependencies ---------------------------------------------------------------------------------------------------------------------------
 
     @Autowired
     private RedisTemplate<String, String> redisTemplate;
@@ -44,6 +50,8 @@ public class NotificationsService {
     private NoteCollaboratorRepository noteCollabRepository;
     @Autowired
     private NoteRepository noteRepository;
+
+    // Invites ---------------------------------------------------------------------------------------------------------------------------------
 
     public void notifyViaWebSocket(UUID userId, Notification notification) {
         messagingTemplate.convertAndSendToUser(
@@ -83,6 +91,7 @@ public class NotificationsService {
         redisTemplate.opsForValue().set("invite:"+workspaceId+":"+invitedUser.getId(), invitedEmail.role().toString(), ttl);
 
     }
+
     public void inviteToNote(UUID noteId, InviteCollabRequestDTO invitedEmail, User inviter){
 
         User invitedUser = userRepository.findByEmail(invitedEmail.email()).orElseThrow(() -> new NotFoundException("User not found"));
@@ -116,5 +125,26 @@ public class NotificationsService {
 
     }
 
+    // General ---------------------------------------------------------------------------------------------------------------------------------
+
+    public Page<GetNotificationResponseDTO> getAllNotifications (CustomUserDetails userDetails, Pageable pageable){
+
+        Page<Notification> notificationPage = notificationRepository.findByUserId(userDetails.getUserId(), pageable);
+        return notificationPage.map(notification -> notificationMapper.NotificationToResponseDTO(notification));
+    }
+
+    public GetNotificationResponseDTO getNotificationById (CustomUserDetails userDetails, UUID notificationId){
+
+        Notification notification = notificationRepository.findByUserIdAndId(userDetails.getUserId(),notificationId)
+                .orElseThrow(() -> new NotFoundException("Notification not found"));
+        return notificationMapper.NotificationToResponseDTO(notification);
+    }
+
+    @Transactional
+    public void deleteNotificationById (CustomUserDetails userDetails, UUID notificationId){
+        Notification notification = notificationRepository.findByUserIdAndId(userDetails.getUserId(),notificationId)
+                .orElseThrow(() -> new NotFoundException("Notification not found"));
+        notificationRepository.delete(notification);
+    }
 
 }
