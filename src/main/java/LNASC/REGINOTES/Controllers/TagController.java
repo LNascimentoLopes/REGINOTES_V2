@@ -79,6 +79,33 @@ public class TagController {
             @RequestBody @Valid UpdateTagRequestDTO request){
         service.updateTagByWorkspaceIdAndTagId(userDetails,workId,tagId,request);
         return ResponseEntity.ok().build();
+
+    }
+
+    // TAGS ------------------------------------------------------------------------------------------
+
+    @Operation(summary = "Assign a tag")
+    @PostMapping("{workId}/{tagId}/{noteId}")
+    public ResponseEntity<Void> AssignTag(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable("workId") UUID workId,
+            @PathVariable("tagId") UUID tagId,
+            @PathVariable("noteId") UUID noteId){
+
+        service.AssignTag(userDetails,workId,tagId,noteId);
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "Deassign a tag")
+    @DeleteMapping("{workId}/{tagId}/{noteId}")
+    public ResponseEntity<Void> DeAssignFromTag(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable("workId") UUID workId,
+            @PathVariable("tagId") UUID tagId,
+            @PathVariable("noteId") UUID noteId){
+
+        service.DeassignTag(userDetails,workId,tagId,noteId);
+        return ResponseEntity.ok().build();
     }
 
 }

@@ -1,8 +1,10 @@
 package LNASC.REGINOTES.Util.Mappers;
 
 import LNASC.REGINOTES.DTOs.NoteDTOs.*;
+import LNASC.REGINOTES.DTOs.TagDTOs.GetTagResponseDTO;
 import LNASC.REGINOTES.Exceptions.NotFoundException;
 import LNASC.REGINOTES.Models.Note;
+import LNASC.REGINOTES.Models.NoteVersion;
 import LNASC.REGINOTES.Models.Workspace;
 import LNASC.REGINOTES.Repositories.NoteRepository;
 import LNASC.REGINOTES.Repositories.WorkspaceRepository;
@@ -11,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
+import java.util.List;
 
 @Component
 public class NoteMapper {
@@ -42,6 +45,28 @@ public class NoteMapper {
                 note.getCreatedAt(),
                 note.getUpdatedAt(),
                 note.getNoteOwner().getId()
+        );
+    }
+    public GetNoteVersionResponseDTO VersionToDto(NoteVersion note){
+        return new GetNoteVersionResponseDTO(
+                note.getId(),
+                note.getContent(),
+                note.getCreatedAt(),
+                note.getVersion(),
+                note.getParentNote().getId(),
+                note.getSaviour().getId()
+        );
+    }
+    public GetWorkspaceNoteResponseDTO WorkspaceNoteToDto(Note note, List<GetTagResponseDTO> tags){
+        return new GetWorkspaceNoteResponseDTO(
+                note.getId(),
+                note.getTitle(),
+                note.getContent(),
+                note.getIsPinned(),
+                note.getCreatedAt(),
+                note.getUpdatedAt(),
+                note.getNoteOwner().getId(),
+                tags
         );
     }
 }

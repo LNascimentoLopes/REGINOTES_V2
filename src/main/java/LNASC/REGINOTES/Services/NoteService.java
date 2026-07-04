@@ -1,20 +1,16 @@
 package LNASC.REGINOTES.Services;
 
 import LNASC.REGINOTES.DTOs.NoteDTOs.*;
+import LNASC.REGINOTES.DTOs.TagDTOs.GetTagResponseDTO;
 import LNASC.REGINOTES.Exceptions.ForbiddenException;
 import LNASC.REGINOTES.Exceptions.NotFoundException;
-import LNASC.REGINOTES.Models.NoteCollaborator;
-import LNASC.REGINOTES.Models.Workspace;
+import LNASC.REGINOTES.Models.*;
+import LNASC.REGINOTES.Repositories.*;
 import LNASC.REGINOTES.Util.Enums.NoteRole;
 import LNASC.REGINOTES.Util.Enums.WorkspaceRole;
-import LNASC.REGINOTES.Models.Note;
-import LNASC.REGINOTES.Models.WorkspaceMember;
-import LNASC.REGINOTES.Repositories.NoteCollaboratorRepository;
-import LNASC.REGINOTES.Repositories.NoteRepository;
-import LNASC.REGINOTES.Repositories.WorkspaceMemberRepository;
-import LNASC.REGINOTES.Repositories.WorkspaceRepository;
 import LNASC.REGINOTES.Security.CustomUserDetails;
 import LNASC.REGINOTES.Util.Mappers.NoteMapper;
+import LNASC.REGINOTES.Util.Mappers.TagMapper;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -24,9 +20,12 @@ import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.ObjectMapper;
 
+import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 @Service
 public class NoteService {
@@ -40,13 +39,15 @@ public class NoteService {
     @Autowired
     private NoteMapper mapper;
     @Autowired
-    private WorkspaceRepository workspaceRepository;
+    private NoteVersionRepository versionRepository;
     @Autowired
     private WorkspaceMemberRepository memberRepository;
     @Autowired
     private RedisTemplate<String,String> redisTemplate;
     @Autowired
     private ObjectMapper objMapper;
+    @Autowired
+    private TagMapper tagMapper;
 
     // All Notes -------------------------------------------------------------------------------------------------------------------------------
 
@@ -221,28 +222,38 @@ public class NoteService {
 
     // Workspace Notes Services ----------------------------------------------------------------------------------------------------------------
 
-    public Page<GetNoteResponseDTO> getCollabNotes (CustomUserDetails userDetails,UUID workId ,Pageable pageable){
+    public Page<GetWorkspaceNoteResponseDTO> getCollabNotes (CustomUserDetails userDetails,UUID workId ,Pageable pageable){
 
         if (memberRepository.findIfWorkspaceMemberByWorkspaceId(userDetails.getUserId(),workId)){
             Page<Note> notes = repository.findNoteByAssignedWorkspace(workId,pageable);
-            return notes.map(note -> mapper.NoteToDto(note));
+
+            return notes.map(note -> {
+                    List<GetTagResponseDTO> tags = note.getTags().stream()
+                            .map(tagMapper::entityToResponseDTO)
+                            .toList();
+                    return mapper.WorkspaceNoteToDto(note,tags);});
         }else {
             throw new ForbiddenException("Permission insufficient");
         }
     }
 
-    public GetNoteResponseDTO getCollabNoteById (CustomUserDetails userDetails , UUID noteId ,UUID workId){
+    public GetWorkspaceNoteResponseDTO getCollabNoteById (CustomUserDetails userDetails , UUID noteId ,UUID workId){
 
         String cacheKey = "notes:collab:" + noteId +":"+workId;
         String cache = redisTemplate.opsForValue().get(cacheKey);
 
         if (cache != null){
-            return objMapper.readValue(cache, GetNoteResponseDTO.class);
+            return objMapper.readValue(cache, GetWorkspaceNoteResponseDTO.class);
         }
 
         if (memberRepository.findIfWorkspaceMemberByWorkspaceId(userDetails.getUserId(),workId)){
             Note note = repository.findNoteByAssignedWorkspaceAndId(workId,noteId).orElseThrow(() -> new NotFoundException("Note not found"));
-            return mapper.NoteToDto(note);
+
+            List<GetTagResponseDTO> tags = note.getTags().stream().map(tagMapper::entityToResponseDTO).toList();
+            GetWorkspaceNoteResponseDTO response = mapper.WorkspaceNoteToDto(note, tags);
+            redisTemplate.opsForValue().set(cacheKey,objMapper.writeValueAsString(response), Duration.ofMinutes(5));
+            return response;
+
         }else {
             throw new ForbiddenException("Permission insufficient");
         }
@@ -274,8 +285,38 @@ public class NoteService {
         }
     }
 
+    // Note Version Services -------------------------------------------------------------------------------------------------------------------
+
+    public Page<GetNoteVersionResponseDTO> getNoteVersions(CustomUserDetails userDetails, UUID noteId, Pageable pageable) {
+        Note note = repository.findNoteById(noteId)
+                .orElseThrow(() -> new NotFoundException("Note not found"));
+
+        validateNoteAccess(userDetails.getUserId(),note);
+
+        return versionRepository.findByNote(noteId, pageable)
+                .map(mapper::VersionToDto);
+    }
+
+    public GetNoteVersionResponseDTO getNoteVersionByid (CustomUserDetails userDetails, UUID noteId,UUID versionId){
+        Note note = repository.findNoteById(noteId)
+                .orElseThrow(() -> new NotFoundException("Note not found"));
+
+        validateNoteAccess(userDetails.getUserId(),note);
+        
+        NoteVersion version = versionRepository.findByNoteAndId(noteId,versionId).orElseThrow(() -> new NotFoundException("Version not found"));
+        return mapper.VersionToDto(version);
+    }
 
     // -----------------------------------------------------------------------------------------------------------------------------------------
 
+    private void validateNoteAccess(UUID userId, Note note) {
+        if (note.getWorkspaceNote() != null) {
+            memberRepository.findMemberByWorkspaceAndId(note.getWorkspaceNote().getId(), userId)
+                    .orElseThrow(() -> new ForbiddenException("Permission insufficient"));
+        } else {
+            noteCollabRepository.findCollabByUserId(userId, note.getId())
+                    .orElseThrow(() -> new ForbiddenException("Permission insufficient"));
+        }
+    }
 }
 

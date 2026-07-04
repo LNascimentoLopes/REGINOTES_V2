@@ -142,7 +142,7 @@ public class NoteController {
 
     @Operation(summary = "Get all notes from a workspace")
     @GetMapping("workspaces/{workId}")
-    public ResponseEntity<Page<GetNoteResponseDTO>> getCollabNotes(
+    public ResponseEntity<Page<GetWorkspaceNoteResponseDTO>> getCollabNotes(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable UUID workId,
             @Parameter(hidden = true) Pageable pageable){
@@ -152,7 +152,7 @@ public class NoteController {
 
     @Operation(summary = "Get a note from a workspace by id")
     @GetMapping("workspaces/{workId}/{noteId}")
-    public ResponseEntity<GetNoteResponseDTO> getCollabNotes(
+    public ResponseEntity<GetWorkspaceNoteResponseDTO> getCollabNotesById(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable("workId") UUID id,
             @PathVariable("noteId") UUID noteId ){
@@ -199,6 +199,28 @@ public class NoteController {
             @Parameter(hidden = true) Pageable pageable){
 
         return ResponseEntity.ok().body(service.getChildrenNotes(userDetails,pageable,id));
+    }
+
+    // CHILDREN NOTES --------------------------------------------------------------------------------
+
+    @Operation(summary = "Get note versions")
+    @GetMapping("{id}/version")
+    public ResponseEntity<Page<GetNoteVersionResponseDTO>> getNoteVersionByNote(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable UUID noteId,
+            @Parameter(hidden = true) Pageable pageable){
+
+        return ResponseEntity.ok().body(service.getNoteVersions(userDetails,noteId,pageable));
+    }
+
+    @Operation(summary = "Get note version by id")
+    @GetMapping("{noteId}/version/{versionId}")
+    public ResponseEntity<GetNoteVersionResponseDTO> getNoteVersionByNote(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable("noteId") UUID noteId,
+            @PathVariable("versionId") UUID versionId){
+
+        return ResponseEntity.ok().body(service.getNoteVersionByid(userDetails,noteId,versionId));
     }
 
     // -----------------------------------------------------------------------------------------------

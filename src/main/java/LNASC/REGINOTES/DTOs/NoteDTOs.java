@@ -9,6 +9,7 @@ import jakarta.validation.constraints.NotEmpty;
 import tools.jackson.databind.JsonNode;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -33,6 +34,28 @@ public class NoteDTOs {
             Instant createdAt,
             Instant updatedAt,
             UUID ownerId
+    ){}
+
+
+    public record GetWorkspaceNoteResponseDTO(
+            UUID id,
+            String title,
+            String content,
+            Boolean isPinned,
+            Instant createdAt,
+            Instant updatedAt,
+            UUID ownerId,
+            List<TagDTOs.GetTagResponseDTO> tags
+    ){}
+
+    public record GetNoteVersionResponseDTO(
+            UUID id,
+            String content,
+            Instant createdAt,
+            Integer version,
+            UUID parentId,
+            UUID saviourId
+
     ){}
 
     public record UpdateCollabRoleRequestDTO (

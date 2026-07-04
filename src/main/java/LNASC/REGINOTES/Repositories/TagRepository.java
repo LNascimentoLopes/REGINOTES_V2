@@ -22,4 +22,6 @@ public interface TagRepository extends JpaRepository<Tag, UUID> {
     Optional<Tag> findByTagAndWorkspaceId(@Param("workId") UUID workId,@Param("tagId")UUID tagId);
 
 
+
+
 }
