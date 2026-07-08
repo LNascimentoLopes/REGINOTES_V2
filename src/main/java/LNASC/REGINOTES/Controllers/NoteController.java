@@ -201,10 +201,10 @@ public class NoteController {
         return ResponseEntity.ok().body(service.getChildrenNotes(userDetails,pageable,id));
     }
 
-    // CHILDREN NOTES --------------------------------------------------------------------------------
+    // NOTE VERSION ----------------------------------------------------------------------------------
 
     @Operation(summary = "Get note versions")
-    @GetMapping("{id}/version")
+    @GetMapping("{noteId}/version")
     public ResponseEntity<Page<GetNoteVersionResponseDTO>> getNoteVersionByNote(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable UUID noteId,
@@ -220,7 +220,27 @@ public class NoteController {
             @PathVariable("noteId") UUID noteId,
             @PathVariable("versionId") UUID versionId){
 
-        return ResponseEntity.ok().body(service.getNoteVersionByid(userDetails,noteId,versionId));
+        return ResponseEntity.ok().body(service.getNoteVersionById(userDetails,noteId,versionId));
+    }
+
+    @Operation(summary = "Restore a past version of a note")
+    @PostMapping("{noteId}/version/{versionId}")
+    public ResponseEntity<Void> RestoreNoteVersionById(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable("noteId") UUID noteId,
+            @PathVariable("versionId") UUID versionId){
+        service.restoreNoteVersion(userDetails,noteId,versionId);
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "delete a past version of a note")
+    @DeleteMapping("{noteId}/version/{versionId}")
+    public ResponseEntity<Void> DeleteNoteVersionById(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable("noteId") UUID noteId,
+            @PathVariable("versionId") UUID versionId){
+        service.deleteNoteVersion(userDetails,noteId,versionId);
+        return ResponseEntity.ok().build();
     }
 
     // -----------------------------------------------------------------------------------------------

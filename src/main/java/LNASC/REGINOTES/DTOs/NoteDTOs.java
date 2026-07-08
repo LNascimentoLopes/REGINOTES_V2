@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.Positive;
 import tools.jackson.databind.JsonNode;
 
 import java.time.Instant;
@@ -15,17 +16,8 @@ import java.util.UUID;
 
 public class NoteDTOs {
 
-    public record CreateNoteRequestDTO(
-            @NotBlank
-            String title,
-            @NotBlank
-            @Schema(example = "{}")
-            JsonNode content,
-            @Schema(example = "123e4567-e89b-12d3-a456-426614174000")
-            Optional<UUID> parentId,
-            @Schema(example = "123e4567-e89b-12d3-a456-426614174000")
-            Optional<UUID> workspaceId
-    ){}
+    // RESPONSES -----------------------------------------------------------------
+
     public record GetNoteResponseDTO(
             UUID id,
             String title,
@@ -35,8 +27,6 @@ public class NoteDTOs {
             Instant updatedAt,
             UUID ownerId
     ){}
-
-
     public record GetWorkspaceNoteResponseDTO(
             UUID id,
             String title,
@@ -58,6 +48,19 @@ public class NoteDTOs {
 
     ){}
 
+    // REQUESTS ------------------------------------------------------------------
+
+    public record CreateNoteRequestDTO(
+            @NotBlank
+            String title,
+            @NotBlank
+            @Schema(example = "{}")
+            JsonNode content,
+            @Schema(example = "123e4567-e89b-12d3-a456-426614174000")
+            Optional<UUID> parentId,
+            @Schema(example = "123e4567-e89b-12d3-a456-426614174000")
+            Optional<UUID> workspaceId
+    ){}
     public record UpdateCollabRoleRequestDTO (
             @Schema(example = "VIEWER")
             NoteRole role
@@ -75,4 +78,5 @@ public class NoteDTOs {
             @Schema(example = "VIEWER")
             NoteRole role
     )implements EmailInvitePattern<NoteRole>{}
+
 }

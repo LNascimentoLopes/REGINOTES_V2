@@ -16,16 +16,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.ObjectMapper;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Stream;
 
 @Service
 public class NoteService {
@@ -88,8 +85,8 @@ public class NoteService {
             if (member.getRole().getLevel() <= WorkspaceRole.VIEWER.getLevel()) {
                 throw new ForbiddenException("Permission level too low");
             }
-        } else {
-            NoteCollaborator collaborator = noteCollabRepository.findCollabByUserId(noteId, userDetails.getUserId())
+        } else if (note.getCollaborators().stream().findAny().isPresent()) {
+            NoteCollaborator collaborator = noteCollabRepository.findCollabByUserId( userDetails.getUserId(), noteId)
                     .orElseThrow(() -> new ForbiddenException("Collaborator not found"));
             if (collaborator.getRole().getLevel() <= NoteRole.VIEWER.getLevel()) {
                 throw new ForbiddenException("Permission level too low");
@@ -291,31 +288,72 @@ public class NoteService {
         Note note = repository.findNoteById(noteId)
                 .orElseThrow(() -> new NotFoundException("Note not found"));
 
-        validateNoteAccess(userDetails.getUserId(),note);
+        validateNoteAccess(userDetails.getUserId(),note,2);
 
         return versionRepository.findByNote(noteId, pageable)
                 .map(mapper::VersionToDto);
     }
 
-    public GetNoteVersionResponseDTO getNoteVersionByid (CustomUserDetails userDetails, UUID noteId,UUID versionId){
+    public GetNoteVersionResponseDTO getNoteVersionById(CustomUserDetails userDetails, UUID noteId, UUID versionId){
         Note note = repository.findNoteById(noteId)
                 .orElseThrow(() -> new NotFoundException("Note not found"));
 
-        validateNoteAccess(userDetails.getUserId(),note);
-        
+        validateNoteAccess(userDetails.getUserId(),note,2);
+
         NoteVersion version = versionRepository.findByNoteAndId(noteId,versionId).orElseThrow(() -> new NotFoundException("Version not found"));
         return mapper.VersionToDto(version);
     }
 
+    @Transactional
+    public void restoreNoteVersion (CustomUserDetails userDetails, UUID noteId, UUID versionId){
+
+        Note note = repository.findNoteById(noteId)
+                .orElseThrow(() -> new NotFoundException("Note not found"));
+
+        validateNoteAccess(userDetails.getUserId(),note,3);
+
+        NoteVersion version = versionRepository.findByNoteAndId(versionId,noteId)
+                .orElseThrow(() -> new NotFoundException("Version not found"));
+
+        NoteVersion backup = new NoteVersion();
+        backup.setContent(note.getContent());
+        backup.setParentNote(note);
+        versionRepository.save(backup);
+
+        note.setContent(version.getContent());
+
+    }
+
+    @Transactional
+    public void deleteNoteVersion (CustomUserDetails userDetails, UUID noteId, UUID versionId){
+
+        Note note = repository.findNoteById(noteId)
+                .orElseThrow(() -> new NotFoundException("Note not found"));
+
+        validateNoteAccess(userDetails.getUserId(),note,3);
+
+        NoteVersion version = versionRepository.findByNoteAndId(versionId,noteId)
+                .orElseThrow(() -> new NotFoundException("Version not found"));
+
+        versionRepository.delete(version);
+
+    }
+
     // -----------------------------------------------------------------------------------------------------------------------------------------
 
-    private void validateNoteAccess(UUID userId, Note note) {
+    private void validateNoteAccess(UUID userId, Note note, int permissionLevel) {
         if (note.getWorkspaceNote() != null) {
-            memberRepository.findMemberByWorkspaceAndId(note.getWorkspaceNote().getId(), userId)
+            WorkspaceMember member = memberRepository.findMemberByWorkspaceAndId(note.getWorkspaceNote().getId(), userId)
                     .orElseThrow(() -> new ForbiddenException("Permission insufficient"));
+            if (member.getRole().getLevel() < permissionLevel){
+                throw  new ForbiddenException("Permission insufficient");
+            }
         } else {
-            noteCollabRepository.findCollabByUserId(userId, note.getId())
+            NoteCollaborator collaborator = noteCollabRepository.findCollabByUserId(userId, note.getId())
                     .orElseThrow(() -> new ForbiddenException("Permission insufficient"));
+            if (collaborator.getRole().getLevel() < permissionLevel){
+                throw  new ForbiddenException("Permission insufficient");
+            }
         }
     }
 }
