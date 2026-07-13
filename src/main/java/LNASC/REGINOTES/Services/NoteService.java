@@ -341,7 +341,7 @@ public class NoteService {
 
     // -----------------------------------------------------------------------------------------------------------------------------------------
 
-    private void validateNoteAccess(UUID userId, Note note, int permissionLevel) {
+    public void validateNoteAccess(UUID userId, Note note, int permissionLevel) {
         if (note.getWorkspaceNote() != null) {
             WorkspaceMember member = memberRepository.findMemberByWorkspaceAndId(note.getWorkspaceNote().getId(), userId)
                     .orElseThrow(() -> new ForbiddenException("Permission insufficient"));

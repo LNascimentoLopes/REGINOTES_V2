@@ -10,6 +10,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import java.time.Instant;
 
@@ -98,6 +99,30 @@ public class GlobalExceptionHandler {
         );
 
         return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
+    }
+    @ExceptionHandler(ForbiddenException.class)
+    public ResponseEntity<StandardErrorDTO> handleForbidden (ForbiddenException e, HttpServletRequest request){
+        StandardErrorDTO error = new StandardErrorDTO(
+                Instant.now(),
+                HttpStatus.FORBIDDEN.value(),
+                "Forbidden",
+                e.getMessage(),
+                request.getRequestURI()
+        );
+
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
+    }
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<StandardErrorDTO> handleMaxUploadSizeExceeded (MaxUploadSizeExceededException e, HttpServletRequest request){
+        StandardErrorDTO error = new StandardErrorDTO(
+                Instant.now(),
+                HttpStatus.CONTENT_TOO_LARGE.value(),
+                "Payload too large",
+                e.getMessage(),
+                request.getRequestURI()
+        );
+
+        return ResponseEntity.status(HttpStatus.CONTENT_TOO_LARGE).body(error);
     }
 
 }
