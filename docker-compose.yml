@@ -30,6 +30,19 @@ services:
       - "15672:15672"
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
+  minio:
+    image: minio/minio
+    container_name: reginotes_minio
+    environment:
+      MINIO_ROOT_USER: ${MINIO_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+
   app:
     build: .
     container_name: reginotes_app
@@ -53,3 +66,4 @@ volumes:
   postgres_data:
   redis_data:
   rabbitmq_data:
+  minio_data:
