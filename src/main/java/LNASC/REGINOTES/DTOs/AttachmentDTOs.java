@@ -26,4 +26,8 @@ public class AttachmentDTOs {
             UUID id,
             String url
     ){}
+
+    public record DownloadProfileResponseDTO(
+            String url
+    ){}
 }

@@ -74,7 +74,6 @@ public class UserService {
             rtoken.setRevokedAt(Instant.now());
 
         });
-        request.avatarUrl().ifPresent(user::setAvatarUrl);
     }
 
     @Transactional

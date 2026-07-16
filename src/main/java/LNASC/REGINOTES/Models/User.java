@@ -28,8 +28,8 @@ public class User {
     private String displayName;
     @Column(name = "password_hash",nullable = false)
     private String passwordHash;
-    @Column(name = "avatar_url")
-    private String avatarUrl;
+    @Column(name = "avatar_key")
+    private String avatarKey;
     @Column(name = "is_active")
     private Boolean isActive;
     @Column(name = "email_verified_at")

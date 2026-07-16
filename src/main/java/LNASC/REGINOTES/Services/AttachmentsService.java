@@ -5,24 +5,33 @@ import LNASC.REGINOTES.Exceptions.NotFoundException;
 import LNASC.REGINOTES.Exceptions.StorageException;
 import LNASC.REGINOTES.Models.Attachment;
 import LNASC.REGINOTES.Models.Note;
+import LNASC.REGINOTES.Models.User;
 import LNASC.REGINOTES.Repositories.AttachmentRepository;
 import LNASC.REGINOTES.Repositories.NoteRepository;
+import LNASC.REGINOTES.Repositories.UserRepository;
 import LNASC.REGINOTES.Security.CustomUserDetails;
 import LNASC.REGINOTES.Util.Mappers.AttachmentMapper;
 import io.minio.*;
+import io.minio.errors.*;
 import io.minio.http.Method;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.io.InputStream;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+
+import static javax.swing.UIManager.getString;
 
 @Slf4j
 @Service
@@ -35,6 +44,8 @@ public class AttachmentsService {
     @Autowired
     private NoteRepository noteRepository;
     @Autowired
+    private UserRepository userRepository;
+    @Autowired
     private NoteService noteService;
     @Autowired
     private MinioClient minioClient;
@@ -43,6 +54,8 @@ public class AttachmentsService {
 
     @Value("${minio.buckets.notes}")
     private String noteBucket;
+    @Value("${minio.buckets.profile}")
+    private String profileBucket;
 
     // General ---------------------------------------------------------------------------------------------------------------------------------
 
@@ -54,20 +67,7 @@ public class AttachmentsService {
 
         noteService.validateNoteAccess(userDetails.getUserId(),note,2);
 
-        String key = UUID.randomUUID() + "_" + request.getOriginalFilename();
-
-        try (InputStream inputStream = request.getInputStream()) {
-            minioClient.putObject(
-                    PutObjectArgs.builder()
-                            .bucket("arquivos")
-                            .object(key)
-                            .stream(inputStream, request.getSize(), -1)
-                            .contentType(request.getContentType())
-                            .build()
-            );
-        } catch (Exception e) {
-            throw new StorageException("Falha ao enviar arquivo para o MinIO");
-        }
+        String key = getKey(request,noteBucket);
 
         Attachment attachment = mapper.DtoToEntity(userDetails.getUser(),request,note,key);
         repository.save(attachment);
@@ -102,7 +102,6 @@ public class AttachmentsService {
             }
             response.add(new DownloadFileResponseDTO(attachmentId,arquivos));
         }
-
         return response;
     }
 
@@ -122,7 +121,6 @@ public class AttachmentsService {
         repository.deleteAll(attachments);
 
         for (Attachment attachment : attachments) {
-
             try {
                 minioClient.removeObject(
                         RemoveObjectArgs.builder()
@@ -136,7 +134,87 @@ public class AttachmentsService {
         }
     }
 
+    // Profile ---------------------------------------------------------------------------------------------------------------------------------
+
+    @Transactional
+    public void saveProfilePicture(CustomUserDetails userDetails, MultipartFile request) {
+        User user = userDetails.getUser();
+        String oldKey = user.getAvatarKey();
+
+        String newKey = getKey(request, profileBucket);
+        user.setAvatarKey(newKey);
+        userRepository.save(user);
+
+        if (oldKey != null && !oldKey.isBlank()) {
+            removeFromMinio(oldKey, profileBucket);
+        }
+    }
+
+    public DownloadProfileResponseDTO downloadProfilePicture(CustomUserDetails userDetails) {
+        User user = userDetails.getUser();
+
+        if (user.getAvatarKey() == null || user.getAvatarKey().isBlank()) {
+            throw new NotFoundException("Usuário não possui foto de perfil");
+        }
+
+        String url;
+
+        try {
+            url = minioClient.getPresignedObjectUrl(
+                    GetPresignedObjectUrlArgs.builder()
+                            .method(Method.GET)
+                            .bucket(profileBucket)
+                            .object(user.getAvatarKey())
+                            .expiry(1, TimeUnit.DAYS)
+                            .build()
+            );
+        } catch (Exception e) {
+            throw new NotFoundException("Profile picture not found");
+        }
+
+        return new DownloadProfileResponseDTO(url);
+    }
+
+    @Transactional
+    public void removeProfilePicture(User user) {
+        if (user.getAvatarKey() != null && !user.getAvatarKey().isBlank()) {
+            removeFromMinio(user.getAvatarKey(), profileBucket);
+        }
+        user.setAvatarKey(null);
+        userRepository.save(user);
+    }
+
+
     // -----------------------------------------------------------------------------------------------------------------------------------------
 
+    private @NonNull String getKey (MultipartFile request, String bucket) {
+        String key = UUID.randomUUID() + "_" + request.getOriginalFilename();
 
+        try (InputStream inputStream = request.getInputStream()) {
+            minioClient.putObject(
+                    PutObjectArgs.builder()
+                            .bucket(bucket)
+                            .object(key)
+                            .stream(inputStream, request.getSize(), -1)
+                            .contentType(request.getContentType())
+                            .build()
+            );
+        } catch (Exception e) {
+            throw new StorageException("Falha ao enviar arquivo para o MinIO");
+        }
+        return key;
+    }
+
+    private void removeFromMinio(String key, String bucket) {
+        try {
+            minioClient.removeObject(
+                    RemoveObjectArgs.builder()
+                            .bucket(bucket)
+                            .object(key)
+                            .build()
+            );
+        } catch (Exception e) {
+            log.error("Falha ao remover objeto do MinIO: {}", key, e);
+        }
+    }
 }

@@ -33,7 +33,6 @@ public class AttachmentController {
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable("noteId") UUID noteId,
             @RequestParam("file") MultipartFile request){
-        service.saveAttachedFile(userDetails,request,noteId);
         return ResponseEntity.ok().body(service.saveAttachedFile(userDetails,request,noteId));
     }
 
@@ -53,6 +52,32 @@ public class AttachmentController {
             @PathVariable("noteId") UUID noteId,
             @RequestBody SelectFilesRequestDTO request){
         service.deleteFilesById(userDetails,request,noteId);
+        return ResponseEntity.ok().build();
+    }
+
+    // PROFILE ---------------------------------------------------------------------------------------
+
+    @Operation(summary = "attach a file")
+    @PostMapping( value = "profile/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Void> saveProfilePictureOnBucket (
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestParam("file") MultipartFile request){
+        service.saveProfilePicture(userDetails,request);
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "get profile picture")
+    @PostMapping("profile/download")
+    public ResponseEntity<DownloadProfileResponseDTO> downloadProfilePictureFromBucketById (
+            @AuthenticationPrincipal CustomUserDetails userDetails){
+        return ResponseEntity.ok().body(service.downloadProfilePicture(userDetails));
+    }
+
+    @Operation(summary = "delete profile picture")
+    @DeleteMapping("profile/remove")
+    public ResponseEntity<Void> removeProfilePictureFromBucketById (
+            @AuthenticationPrincipal CustomUserDetails userDetails){
+        service.removeProfilePicture(userDetails.getUser());
         return ResponseEntity.ok().build();
     }
 
