@@ -76,6 +76,7 @@ public class NoteService {
     @Transactional
     public void updateNote(CustomUserDetails userDetails, UpdateNoteRequestDTO request, UUID noteId){
 
+
         Note note= repository.findNoteById(noteId).orElseThrow(() -> new NotFoundException("Note not found"));
 
         if (note.getWorkspaceNote() != null) {
@@ -85,27 +86,56 @@ public class NoteService {
             if (member.getRole().getLevel() <= WorkspaceRole.VIEWER.getLevel()) {
                 throw new ForbiddenException("Permission level too low");
             }
+
+            String cacheKey = "notes:collab:" + noteId +":"+ note.getWorkspaceNote().getId();
+            redisTemplate.delete(cacheKey);
+
         } else if (note.getCollaborators().stream().findAny().isPresent()) {
             NoteCollaborator collaborator = noteCollabRepository.findCollabByUserId( userDetails.getUserId(), noteId)
                     .orElseThrow(() -> new ForbiddenException("Collaborator not found"));
             if (collaborator.getRole().getLevel() <= NoteRole.VIEWER.getLevel()) {
                 throw new ForbiddenException("Permission level too low");
             }
+            String cacheKey = "notes:orphanCollab:" +userDetails.getUserId() +":"+ noteId;
+            redisTemplate.delete(cacheKey);
+        }else {
+            String cacheKey = "notes:orphan:" +userDetails.getUserId() +":"+ noteId;
+            redisTemplate.delete(cacheKey);
         }
-
         repository.save(mapper.DtoToUpdateNote(request, note));
     }
 
     @Transactional
     public void softDeleteNote(CustomUserDetails userDetails, UUID noteId){
 
-        NoteCollaborator collaborator = noteCollabRepository.findCollabByUserId(userDetails.getUserId(), noteId)
-                .orElseThrow(() -> new NotFoundException("Member not Found"));
-        if (collaborator.getRole().getLevel() == NoteRole.OWNER.getLevel()){
-            repository.softDeleteById(noteId, Instant.now());
+
+        Note note= repository.findNoteById(noteId).orElseThrow(() -> new NotFoundException("Note not found"));
+
+        if (note.getWorkspaceNote() != null) {
+            WorkspaceMember member = memberRepository.findMemberByWorkspaceAndId(
+                            note.getWorkspaceNote().getId(), userDetails.getUserId())
+                    .orElseThrow(() -> new NotFoundException("Member not found"));
+            if (member.getRole().getLevel() <= WorkspaceRole.ADMIN.getLevel()) {
+                throw new ForbiddenException("Permission level too low");
+            }
+
+            String cacheKey = "notes:collab:" + noteId +":"+ note.getWorkspaceNote().getId();
+            redisTemplate.delete(cacheKey);
+
+        } else if (note.getCollaborators().stream().findAny().isPresent()) {
+            NoteCollaborator collaborator = noteCollabRepository.findCollabByUserId( userDetails.getUserId(), noteId)
+                    .orElseThrow(() -> new ForbiddenException("Collaborator not found"));
+            if (collaborator.getRole().getLevel() <= NoteRole.OWNER.getLevel()) {
+                throw new ForbiddenException("Permission level too low");
+            }
+            String cacheKey = "notes:orphanCollab:" +userDetails.getUserId() +":"+ noteId;
+            redisTemplate.delete(cacheKey);
         }else {
-            throw new ForbiddenException("Permission level too low");
+            String cacheKey = "notes:orphan:" +userDetails.getUserId() +":"+ noteId;
+            redisTemplate.delete(cacheKey);
         }
+
+        repository.softDeleteById(noteId, Instant.now());
 
     }
 
@@ -140,7 +170,9 @@ public class NoteService {
         Note note = repository.findNoteByIdAndOwner(noteId, userDetails.getUserId())
                 .orElseThrow(() -> new NotFoundException("Note not found"));
 
-        return mapper.NoteToDto(note);
+        GetNoteResponseDTO response = mapper.NoteToDto(note);
+        redisTemplate.opsForValue().set(cacheKey,objMapper.writeValueAsString(response));
+        return response;
     }
 
     // Orphan, Collaborated , Services ---------------------------------------------------------------------------------------------------------
@@ -162,8 +194,10 @@ public class NoteService {
 
         Note note = repository.findCollabNoteById(noteId, userDetails.getUserId())
                 .orElseThrow(() -> new NotFoundException("Note not found"));
+        GetNoteResponseDTO response = mapper.NoteToDto(note);
+        redisTemplate.opsForValue().set(cacheKey,objMapper.writeValueAsString(response));
 
-        return mapper.NoteToDto(note);
+        return response;
     }
 
     @Transactional
@@ -356,5 +390,6 @@ public class NoteService {
             }
         }
     }
+
 }
 

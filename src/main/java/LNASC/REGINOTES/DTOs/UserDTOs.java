@@ -6,15 +6,19 @@ import java.util.Optional;
 import java.util.UUID;
 
 public class UserDTOs {
+
+    // Responses ----------------------------------------------------------------------------------------------------------------------------------------
+
     public record GetUserResponseDTO(
             UUID id,
             String username,
-            String avatarUrl,
             String email ){}
+
+    // Requests -----------------------------------------------------------------------------------------------------------------------------------------
+
     public record UpdateUserRequestDTO(
 
             Optional<@NotBlank @Size(min = 3) String> username,
-            Optional<String> avatarUrl,
             Optional<@Email @NotBlank String> email
     ){}
     public record UpdatePasswordRequestDTO(
@@ -25,5 +29,8 @@ public class UserDTOs {
             @NotBlank
             @NotEmpty
             @Size(min = 3, max = 50, message = "password not suitable")
-            String newPassword){}
+            String newPassword
+    ){}
+
+    // ---------------------------------------------------------------------------------------------------------------------------------------------------
 }

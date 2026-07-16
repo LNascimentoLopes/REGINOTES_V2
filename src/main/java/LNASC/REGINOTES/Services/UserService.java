@@ -30,6 +30,8 @@ import java.util.Optional;
 @Service
 public class UserService {
 
+    // Dependencies ----------------------------------------------------------------------------------------------------------------------------------------
+
     @Autowired
     private UserRepository repository;
     @Autowired
@@ -42,6 +44,8 @@ public class UserService {
     private JwtService JService;
     @Autowired
     private PasswordEncoder encoder;
+
+    // User, Info, Services --------------------------------------------------------------------------------------------------------------------------------
 
     public GetUserResponseDTO getUserInfo(CustomUserDetails user){
        return mapper.EntityToGetUserResponse(user.getUser());
@@ -83,4 +87,6 @@ public class UserService {
             user.setPasswordHash(encoder.encode(request.newPassword()));
         }
     }
+
+    // -----------------------------------------------------------------------------------------------------------------------------------------------------
 }

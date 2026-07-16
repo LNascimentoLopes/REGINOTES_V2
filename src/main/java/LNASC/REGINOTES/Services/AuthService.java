@@ -31,6 +31,8 @@ import java.util.UUID;
 @Service
 public class AuthService {
 
+    // Dependencies ----------------------------------------------------------------------------------------------------------------------------------------
+
     @Autowired
     private UserRepository userRepository;
     @Autowired
@@ -46,6 +48,7 @@ public class AuthService {
     @Autowired
     private PasswordEncoder encoder;
 
+    // Authentication, Services ----------------------------------------------------------------------------------------------------------------------------
 
     @Transactional
     public void registerUser(RegisterRequestDTO request){
@@ -56,6 +59,7 @@ public class AuthService {
         User user = userMapper.UserDtoToEntity(request,hashed);
         userRepository.save(user);
     }
+
     @Transactional
     public LoginResponseDTO loginUser (LoginRequestDTO request){
         User user = userRepository.findByEmail(request.email()).orElseThrow(() -> new NotFoundException("User not found"));
@@ -69,6 +73,7 @@ public class AuthService {
             throw new ForbiddenException("User Deactivated");
         }
     }
+
     public RefreshResponseDTO refreshUser (RefreshRequestDTO request) {
         RefreshToken rtoken = tokenRepository.findById(request.token()).orElseThrow(()-> new NotFoundException("token not found"));
         if (rtoken.getExpiresAt().isBefore(Instant.now())){
@@ -81,6 +86,7 @@ public class AuthService {
             return new RefreshResponseDTO(token);
         }
     }
+
     @Transactional
     public void logout (User user, HttpServletRequest request){
         String token = request.getHeader("Authorization").substring(7);
@@ -93,6 +99,8 @@ public class AuthService {
         redisTemplate.opsForValue().set("blacklist:"+ token, "true",ttl);
     }
 
+    // Recovery, Services ----------------------------------------------------------------------------------------------------------------------------------
+
     public void generateRecoveryCode(ForgotPasswordRequestDTO request) {
         String code = String.valueOf(new Random().nextInt(900000) + 100000);
         if (userRepository.findByEmail(request.email()).isPresent()){
@@ -100,6 +108,7 @@ public class AuthService {
             redisTemplate.opsForValue().set("recover:"+request.email(), code, Duration.ofMinutes(30));
         }
     }
+
     public VerifyCodeResponseDTO verifyResetCode(VerifyCodeRequestDTO request){
         if(Boolean.TRUE.equals(redisTemplate.hasKey("recover:"+ request.email()))){
             String code = redisTemplate.opsForValue().get("recover:" + request.email());
@@ -117,6 +126,7 @@ public class AuthService {
         }
 
     }
+
     @Transactional
     public void alterPasswordByRecoverCode(ResetPasswordRequestDTO request){
 
@@ -131,4 +141,6 @@ public class AuthService {
 
 
     }
+
+    // -----------------------------------------------------------------------------------------------------------------------------------------------------
 }

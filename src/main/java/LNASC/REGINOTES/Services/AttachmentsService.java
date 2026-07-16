@@ -1,6 +1,7 @@
 package LNASC.REGINOTES.Services;
 
 import LNASC.REGINOTES.DTOs.AttachmentDTOs.*;
+import LNASC.REGINOTES.DTOs.NoteDTOs;
 import LNASC.REGINOTES.Exceptions.NotFoundException;
 import LNASC.REGINOTES.Exceptions.StorageException;
 import LNASC.REGINOTES.Models.Attachment;
@@ -19,8 +20,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import tools.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -50,7 +53,11 @@ public class AttachmentsService {
     @Autowired
     private MinioClient minioClient;
     @Autowired
+    private RedisTemplate<String,String> redisTemplate;
+    @Autowired
     private AttachmentMapper mapper;
+    @Autowired
+    private ObjectMapper objMapper;
 
     @Value("${minio.buckets.notes}")
     private String noteBucket;
@@ -138,6 +145,7 @@ public class AttachmentsService {
 
     @Transactional
     public void saveProfilePicture(CustomUserDetails userDetails, MultipartFile request) {
+
         User user = userDetails.getUser();
         String oldKey = user.getAvatarKey();
 
@@ -145,12 +153,27 @@ public class AttachmentsService {
         user.setAvatarKey(newKey);
         userRepository.save(user);
 
+        String cacheKey = "profile:" +userDetails.getUserId();
+        String cache = redisTemplate.opsForValue().get(cacheKey);
+
+        if (cache != null){
+            redisTemplate.delete(cacheKey);
+        }
+
         if (oldKey != null && !oldKey.isBlank()) {
             removeFromMinio(oldKey, profileBucket);
         }
     }
 
     public DownloadProfileResponseDTO downloadProfilePicture(CustomUserDetails userDetails) {
+
+        String cacheKey = "profile:" +userDetails.getUserId();
+        String cache = redisTemplate.opsForValue().get(cacheKey);
+
+        if (cache != null){
+            return objMapper.readValue(cache, DownloadProfileResponseDTO.class);
+        }
+
         User user = userDetails.getUser();
 
         if (user.getAvatarKey() == null || user.getAvatarKey().isBlank()) {
@@ -172,7 +195,9 @@ public class AttachmentsService {
             throw new NotFoundException("Profile picture not found");
         }
 
-        return new DownloadProfileResponseDTO(url);
+        DownloadProfileResponseDTO response = new DownloadProfileResponseDTO(url);
+        redisTemplate.opsForValue().set(cacheKey,objMapper.writeValueAsString(response.url()),23, TimeUnit.HOURS);
+        return response;
     }
 
     @Transactional
@@ -181,6 +206,10 @@ public class AttachmentsService {
             removeFromMinio(user.getAvatarKey(), profileBucket);
         }
         user.setAvatarKey(null);
+
+        String cacheKey = "profile:" + user.getId();
+        redisTemplate.delete(cacheKey);
+
         userRepository.save(user);
     }
 
@@ -206,6 +235,7 @@ public class AttachmentsService {
     }
 
     private void removeFromMinio(String key, String bucket) {
+
         try {
             minioClient.removeObject(
                     RemoveObjectArgs.builder()
