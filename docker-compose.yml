@@ -54,14 +54,20 @@ services:
       SPRING_RABBITMQ_HOST: rabbitmq
       SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER}
       SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+      MINIO_USER: ${MINIO_USER}
+      MINIO_PASSWORD: ${MINIO_PASSWORD}
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT}
+      MINIO_NOTE_BUCKET: ${MINIO_NOTE_BUCKET}
+      MINIO_USER_BUCKET: ${MINIO_USER_BUCKET}
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRATION: ${JWT_EXPIRATION}
     ports:
-      - "8080:8080"
+        - "8080:8080"
     depends_on:
-      - postgres
-      - redis
-      - rabbitmq
+        - postgres
+        - redis
+        - rabbitmq
+        - minio
 volumes:
   postgres_data:
   redis_data:
