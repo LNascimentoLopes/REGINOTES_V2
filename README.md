@@ -35,7 +35,7 @@
 - CRUD completo com soft delete, restore e hard delete
 - Hierarquia de workspaces (parent/children)
 - Sistema de convites por email com tokens temporários no Redis (TTL 3 dias)
-- Hierarquia de permissões granular: `OWNER > ADMIN > EDITOR > VIEWER`
+- Hierarquia de permissões granular com níveis numéricos: `OWNER > ADMIN > EDITOR > VIEWER`
 - Gerenciamento de membros: adicionar, remover e alterar cargo com validação de nível
 - Notificações em tempo real via WebSocket (STOMP) + envio de email via RabbitMQ
 
@@ -47,7 +47,7 @@
 - Versionamento automático a cada save com histórico completo
 - Restore de versão com backup automático do estado atual
 - Cache de leitura com Redis
-- Edição colaborativa em tempo real via **Yjs + TipTap** (sincronização no frontend, persistência via REST)
+- Edição colaborativa em tempo real via **Yjs + TipTap** (sincronização feita inteiramente no frontend; o backend apenas persiste o resultado final via REST, sem arbitrar conflitos de edição)
 - Conteúdo armazenado como JSONB (estrutura gerenciada pelo TipTap/ProseMirror)
 
 ### Colaboradores de Nota
@@ -59,6 +59,15 @@
 - CRUD de tags vinculadas a workspaces
 - Atribuição e remoção de tags em notas
 - Permissão de criação/edição restrita a EDITOR+
+
+### Anexos (AttachmentService)
+- Upload de arquivos via `MultipartFile` com armazenamento no MinIO (`UUID_nomeOriginal`)
+- Download via URL pré-assinada (signed URL), gerada sob demanda — nunca persistida, sempre resolvida na leitura
+- Download em lote (múltiplos anexos em uma única requisição)
+- Delete com remoção sincronizada entre PostgreSQL e MinIO (banco como fonte de verdade; falha no MinIO é logada, não bloqueia a operação)
+- Foto de perfil tratada como anexo dedicado, com bucket próprio e key persistida na entidade `User` (nunca a URL, que expira)
+- Cache de signed URL de foto de perfil no Redis, com invalidação explícita a cada troca/remoção
+- Validação de posse/permissão antes de servir ou remover qualquer anexo
 
 ### Notificações
 - Persistência no banco + entrega em tempo real via WebSocket
@@ -80,11 +89,12 @@ Spring Boot API
 └───────────────────────────────────┘
 ```
 
-**Camadas:** Controller → Service → Repository  
-**Segurança:** Spring Security + JWT stateless  
-**Migrations:** Flyway (versionadas, imutáveis)  
-**Mensageria:** RabbitMQ com duas filas independentes (email, indexação)  
+**Camadas:** Controller → Service → Repository
+**Segurança:** Spring Security + JWT stateless
+**Migrations:** Flyway (versionadas, imutáveis)
+**Mensageria:** RabbitMQ com duas filas independentes (email, indexação)
 **Cache:** Redis com invalidação explícita por chave
+**Armazenamento de arquivos:** MinIO com buckets separados por domínio (anexos de nota, fotos de perfil), URLs sempre pré-assinadas e geradas sob demanda
 
 ---
 
@@ -104,6 +114,7 @@ Spring Boot API
 - JSONB para conteúdo de notas (gerenciado pelo frontend)
 - Triggers para versionamento automático e inserção do owner como colaborador
 - `Instant` para todas as datas
+- Anexos referenciados no conteúdo JSONB apenas por `attachmentId` — nunca por URL, evitando links quebrados por expiração de signed URL
 
 ---
 
@@ -126,6 +137,7 @@ docker compose up -d
 # API:           http://localhost:8080
 # Swagger:       http://localhost:8080/swagger-ui.html
 # RabbitMQ UI:   http://localhost:15672
+# MinIO UI:   http://localhost:9001
 ```
 
 > O arquivo `.env` nunca é versionado. Crie o seu localmente com as variáveis necessárias.
@@ -134,9 +146,9 @@ docker compose up -d
 
 ## 🗺️ Roadmap
 
-- [ ] AttachmentService com MinIO
-- [ ] Busca Full-Text com PostgreSQL FTS
-- [ ] ExportService (PDF, Markdown, HTML) — Strategy Pattern
+- [ ] Notificações de conteúdo (nota editada/compartilhada) via WebSocket, estendendo o Observer já existente
+- [ ] Busca Full-Text com PostgreSQL FTS (`tsvector`/`tsquery` + índice GIN) — substitui o uso de ElasticSearch, descartado pelo custo
+- [ ] ExportService (PDF, Markdown, HTML) — Strategy Pattern, processado de forma assíncrona por workers consumindo fila no RabbitMQ
 - [ ] Validação de SUBSCRIBE no WebSocket por nota
 - [ ] OAuth2 (Google, GitHub)
 - [ ] Rate limiting nos endpoints de autenticação
