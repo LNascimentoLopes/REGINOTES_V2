@@ -15,6 +15,7 @@ import LNASC.REGINOTES.RabbitMQ.EmailProducer;
 import LNASC.REGINOTES.Repositories.*;
 import LNASC.REGINOTES.Util.Mappers.NotificationMapper;
 import jakarta.transaction.Transactional;
+import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -61,7 +62,7 @@ public class NotificationsService {
         );
     }
 
-    public void inviteToWorkspace(UUID workspaceId, InviteMemberRequestDTO invitedEmail, User inviter){
+    public void inviteToWorkspace(UUID workspaceId, @NonNull InviteMemberRequestDTO invitedEmail, User inviter){
 
         User invitedUser = userRepository.findByEmail(invitedEmail.email()).orElseThrow(() -> new NotFoundException("User not found"));
         if (workspaceMemberRepository.findIfWorkspaceMemberByWorkspaceId(invitedUser.getId(),workspaceId)){
@@ -123,6 +124,40 @@ public class NotificationsService {
         Duration ttl = Duration.ofDays(3);
         redisTemplate.opsForValue().set("invite:"+noteId+":"+invitedUser.getId(), invitedEmail.role().toString(), ttl);
 
+    }
+
+    // update ---------------------------------------------------------------------------------------------------------------------------------
+
+    public void notifyNoteUpdate(User target, Note note){
+
+        Notification notification = new Notification();
+        notification.setType(NotificationType.NOTE_UPDATED);
+        notification.setNotificationOwner(target);
+        notification.setPayload(note.getTitle() + "was updated");
+        notificationRepository.save(notification);
+
+        notifyViaWebSocket(target.getId(), notification);
+
+    }
+    public void notifyVersionRestored(User target, Note note){
+
+        Notification notification = new Notification();
+        notification.setType(NotificationType.VERSION_RESTORED);
+        notification.setNotificationOwner(target);
+        notification.setPayload(note.getTitle() + "was restored to a past version");
+        notificationRepository.save(notification);
+
+        notifyViaWebSocket(target.getId(), notification);
+    }
+
+    public void notifyNewCollaborator(User target, String name){
+        Notification notification = new Notification();
+        notification.setType(NotificationType.COLLABORATOR_JOINED);
+        notification.setNotificationOwner(target);
+        notification.setPayload(name + "has a new collaborator");
+        notificationRepository.save(notification);
+
+        notifyViaWebSocket(target.getId(), notification);
     }
 
     // General ---------------------------------------------------------------------------------------------------------------------------------

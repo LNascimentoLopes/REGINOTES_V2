@@ -38,6 +38,8 @@ public class NoteService {
     @Autowired
     private NoteVersionRepository versionRepository;
     @Autowired
+    private NotificationsService notificationsService;
+    @Autowired
     private WorkspaceMemberRepository memberRepository;
     @Autowired
     private RedisTemplate<String,String> redisTemplate;
@@ -72,37 +74,57 @@ public class NoteService {
 
         repository.save(mapped);
     }
-    
+
     @Transactional
-    public void updateNote(CustomUserDetails userDetails, UpdateNoteRequestDTO request, UUID noteId){
-
-
-        Note note= repository.findNoteById(noteId).orElseThrow(() -> new NotFoundException("Note not found"));
+    public void updateNote(CustomUserDetails userDetails, UpdateNoteRequestDTO request, UUID noteId) {
+        Note note = repository.findNoteById(noteId)
+                .orElseThrow(() -> new NotFoundException("Note not found"));
 
         if (note.getWorkspaceNote() != null) {
             WorkspaceMember member = memberRepository.findMemberByWorkspaceAndId(
                             note.getWorkspaceNote().getId(), userDetails.getUserId())
-                    .orElseThrow(() -> new NotFoundException("Member not found"));
+                    .orElseThrow(() -> new ForbiddenException("You are not a member of this workspace"));
+
             if (member.getRole().getLevel() <= WorkspaceRole.VIEWER.getLevel()) {
                 throw new ForbiddenException("Permission level too low");
             }
 
-            String cacheKey = "notes:collab:" + noteId +":"+ note.getWorkspaceNote().getId();
+            Note updatedNote = mapper.DtoToUpdateNote(request, note);
+            repository.save(updatedNote);
+
+            List<WorkspaceMember> membersByWorkspace = memberRepository.findMemberByWorkspace(note.getWorkspaceNote().getId());
+            for (WorkspaceMember m : membersByWorkspace) {
+                notificationsService.notifyNoteUpdate(m.getWorkspaceGuest(), updatedNote);
+            }
+
+            String cacheKey = "notes:collab:" + noteId + ":" + note.getWorkspaceNote().getId();
             redisTemplate.delete(cacheKey);
 
-        } else if (note.getCollaborators().stream().findAny().isPresent()) {
-            NoteCollaborator collaborator = noteCollabRepository.findCollabByUserId( userDetails.getUserId(), noteId)
-                    .orElseThrow(() -> new ForbiddenException("Collaborator not found"));
+        } else if (note.getCollaborators().size() > 1) {
+            NoteCollaborator collaborator = noteCollabRepository.findCollabByUserId(userDetails.getUserId(), noteId)
+                    .orElseThrow(() -> new ForbiddenException("You are not a collaborator on this note"));
+
             if (collaborator.getRole().getLevel() <= NoteRole.VIEWER.getLevel()) {
                 throw new ForbiddenException("Permission level too low");
             }
-            String cacheKey = "notes:orphanCollab:" +userDetails.getUserId() +":"+ noteId;
+
+            Note updatedNote = mapper.DtoToUpdateNote(request, note);
+            repository.save(updatedNote);
+
+            List<NoteCollaborator> collaborators = noteCollabRepository.findCollaboratorsByNote(noteId);
+            for (NoteCollaborator nc : collaborators) {
+                notificationsService.notifyNoteUpdate(nc.getNoteGuest(), updatedNote);
+            }
+
+            String cacheKey = "notes:orphanCollab:" + userDetails.getUserId() + ":" + noteId;
             redisTemplate.delete(cacheKey);
-        }else {
-            String cacheKey = "notes:orphan:" +userDetails.getUserId() +":"+ noteId;
+
+        } else {
+            repository.save(mapper.DtoToUpdateNote(request, note));
+
+            String cacheKey = "notes:orphan:" + userDetails.getUserId() + ":" + noteId;
             redisTemplate.delete(cacheKey);
         }
-        repository.save(mapper.DtoToUpdateNote(request, note));
     }
 
     @Transactional
@@ -232,6 +254,9 @@ public class NoteService {
 
         noteCollabRepository.save(collaborator);
 
+        for ( NoteCollaborator nc : note.getCollaborators()){
+            notificationsService.notifyNewCollaborator(nc.getNoteGuest(),note.getTitle());
+        }
         redisTemplate.delete("invite:" + id + ":" + userDetails.getUserId());
     }
 
@@ -356,6 +381,9 @@ public class NoteService {
 
         note.setContent(version.getContent());
 
+        for(NoteCollaborator nc : note.getCollaborators()){
+            notificationsService.notifyVersionRestored(nc.getNoteGuest(),note);
+        }
     }
 
     @Transactional

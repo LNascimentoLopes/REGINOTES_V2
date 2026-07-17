@@ -38,7 +38,8 @@ public class WorkspaceService {
     private RedisTemplate<String,String> redisTemplate;
     @Autowired
     private ObjectMapper objMapper;
-
+    @Autowired
+    private NotificationsService notificationsService;
 
     // Base Workspace Services -------------------------------------------------------------------------------------------------------------
 
@@ -149,6 +150,10 @@ public class WorkspaceService {
         member.setWorkspaceGuest(userDetails.getUser());
 
         memberRepository.save(member);
+
+        for (WorkspaceMember m : workspace.getWorkspaceMembers()){
+            notificationsService.notifyNewCollaborator(m.getWorkspaceGuest(),workspace.getName());
+        }
 
         redisTemplate.delete("invite:" + id + ":" + userDetails.getUserId());
     }
