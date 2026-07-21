@@ -2,6 +2,7 @@ package LNASC.REGINOTES.Services;
 
 import LNASC.REGINOTES.DTOs.UserDTOs.*;
 import LNASC.REGINOTES.Exceptions.EmailAlreadyInUserException;
+import LNASC.REGINOTES.Exceptions.ForbiddenException;
 import LNASC.REGINOTES.Exceptions.NotFoundException;
 import LNASC.REGINOTES.Models.RefreshToken;
 import LNASC.REGINOTES.Models.User;
@@ -85,6 +86,8 @@ public class UserService {
         User user = repository.findById(userDetails.getUserId()).orElseThrow(() -> new EntityNotFoundException("User not found"));
         if (encoder.matches(request.oldPassword(), user.getPasswordHash())){
             user.setPasswordHash(encoder.encode(request.newPassword()));
+        }else {
+            throw new ForbiddenException("Password does not match");
         }
     }
 

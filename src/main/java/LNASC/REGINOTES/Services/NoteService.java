@@ -144,10 +144,10 @@ public class NoteService {
             String cacheKey = "notes:collab:" + noteId +":"+ note.getWorkspaceNote().getId();
             redisTemplate.delete(cacheKey);
 
-        } else if (note.getCollaborators().stream().findAny().isPresent()) {
+        } else if (note.getCollaborators().size() > 1) {
             NoteCollaborator collaborator = noteCollabRepository.findCollabByUserId( userDetails.getUserId(), noteId)
                     .orElseThrow(() -> new ForbiddenException("Collaborator not found"));
-            if (collaborator.getRole().getLevel() <= NoteRole.OWNER.getLevel()) {
+            if (collaborator.getRole().getLevel() < NoteRole.OWNER.getLevel()) {
                 throw new ForbiddenException("Permission level too low");
             }
             String cacheKey = "notes:orphanCollab:" +userDetails.getUserId() +":"+ noteId;
