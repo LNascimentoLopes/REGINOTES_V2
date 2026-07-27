@@ -9,8 +9,6 @@ import LNASC.REGINOTES.Repositories.UserRepository;
 import LNASC.REGINOTES.Security.CustomUserDetails;
 import LNASC.REGINOTES.Security.JwtService;
 import LNASC.REGINOTES.Util.Mappers.UserMapper;
-import io.jsonwebtoken.ExpiredJwtException;
-import jakarta.persistence.EntityExistsException;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.transaction.Transactional;
@@ -22,9 +20,6 @@ import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
-import java.util.NoSuchElementException;
-import java.util.Optional;
 import java.util.Random;
 import java.util.UUID;
 

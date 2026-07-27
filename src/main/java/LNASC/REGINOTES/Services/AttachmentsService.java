@@ -1,7 +1,6 @@
 package LNASC.REGINOTES.Services;
 
 import LNASC.REGINOTES.DTOs.AttachmentDTOs.*;
-import LNASC.REGINOTES.DTOs.NoteDTOs;
 import LNASC.REGINOTES.Exceptions.NotFoundException;
 import LNASC.REGINOTES.Exceptions.StorageException;
 import LNASC.REGINOTES.Models.Attachment;
@@ -25,16 +24,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import tools.jackson.databind.ObjectMapper;
 
-import java.io.IOException;
 import java.io.InputStream;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
-import static javax.swing.UIManager.getString;
 
 @Slf4j
 @Service
@@ -122,7 +117,7 @@ public class AttachmentsService {
         List<Attachment> attachments = repository.findAllByImgIdInAndNoteId(request.imgIds(), noteId);
 
         if (attachments.size() != request.imgIds().size()) {
-            throw new NotFoundException("Um ou mais anexos não foram encontrados ou não pertencem a esta nota");
+            throw new NotFoundException("One or more files were not found or do not belong to this note");
         }
 
         repository.deleteAll(attachments);
@@ -136,7 +131,7 @@ public class AttachmentsService {
                                 .build()
                 );
             } catch (Exception e) {
-                log.error("Falha ao remover objeto do MinIO: {}", attachment.getStorageKey(), e);
+                log.error("Failed to remove object from MinIO: {}", attachment.getStorageKey(), e);
             }
         }
     }
@@ -154,11 +149,7 @@ public class AttachmentsService {
         userRepository.save(user);
 
         String cacheKey = "profile:" +userDetails.getUserId();
-        String cache = redisTemplate.opsForValue().get(cacheKey);
-
-        if (cache != null){
-            redisTemplate.delete(cacheKey);
-        }
+        redisTemplate.delete(cacheKey);
 
         if (oldKey != null && !oldKey.isBlank()) {
             removeFromMinio(oldKey, profileBucket);
@@ -177,7 +168,7 @@ public class AttachmentsService {
         User user = userDetails.getUser();
 
         if (user.getAvatarKey() == null || user.getAvatarKey().isBlank()) {
-            throw new NotFoundException("Usuário não possui foto de perfil");
+            throw new NotFoundException("User does not have profile picture");
         }
 
         String url;
@@ -196,7 +187,7 @@ public class AttachmentsService {
         }
 
         DownloadProfileResponseDTO response = new DownloadProfileResponseDTO(url);
-        redisTemplate.opsForValue().set(cacheKey,objMapper.writeValueAsString(response.url()),23, TimeUnit.HOURS);
+        redisTemplate.opsForValue().set(cacheKey,objMapper.writeValueAsString(response),23, TimeUnit.HOURS);
         return response;
     }
 
@@ -229,7 +220,7 @@ public class AttachmentsService {
                             .build()
             );
         } catch (Exception e) {
-            throw new StorageException("Falha ao enviar arquivo para o MinIO");
+            throw new StorageException("Failed to send file to MinIO");
         }
         return key;
     }
@@ -244,7 +235,7 @@ public class AttachmentsService {
                             .build()
             );
         } catch (Exception e) {
-            log.error("Falha ao remover objeto do MinIO: {}", key, e);
+            log.error("Failed to remove fro MinIO: {}", key, e);
         }
     }
 }
