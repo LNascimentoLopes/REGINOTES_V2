@@ -43,7 +43,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class AttachmentsServicesUnitTest {
+class AttachmentServicesUnitTest {
 
     @Mock
     private AttachmentRepository repository;
@@ -95,7 +95,7 @@ class AttachmentsServicesUnitTest {
     class SaveAttachedFile {
 
         @Test
-        void deveSalvarAnexoQuandoNotaExisteEUsuarioTemAcesso() throws Exception {
+        void shouldSaveFileWhenUserExistsAndHaveAccess() throws Exception {
             MultipartFile file = mockMultipartFile();
             Attachment attachment = mock(Attachment.class);
             UUID attachmentId = UUID.randomUUID();
@@ -113,7 +113,7 @@ class AttachmentsServicesUnitTest {
         }
 
         @Test
-        void deveLancarNotFoundQuandoNotaNaoExiste() {
+        void shouldThrowNotFoundWhenNoteDoesNotExist() {
             MultipartFile file = mock(MultipartFile.class);
             when(noteRepository.findNoteById(noteId)).thenReturn(Optional.empty());
 
@@ -124,7 +124,7 @@ class AttachmentsServicesUnitTest {
         }
 
         @Test
-        void deveLancarStorageExceptionQuandoMinioFalhaNoUpload() throws Exception {
+        void shouldThrowStorageExceptionWhenMinioFailToUpload() throws Exception {
             MultipartFile file = mockMultipartFile();
             when(noteRepository.findNoteById(noteId)).thenReturn(Optional.of(note));
             when(minioClient.putObject(any(PutObjectArgs.class))).thenThrow(new RuntimeException("boom"));
@@ -142,7 +142,7 @@ class AttachmentsServicesUnitTest {
     class DownloadFilesById {
 
         @Test
-        void deveRetornarUrlsQuandoAnexosExistem() throws Exception {
+        void shouldReturnUrlsWhenFilesExist() throws Exception {
             UUID attachmentId = UUID.randomUUID();
             SelectFilesRequestDTO request = new SelectFilesRequestDTO(List.of(attachmentId));
             Attachment attachment = mock(Attachment.class);
@@ -161,7 +161,7 @@ class AttachmentsServicesUnitTest {
         }
 
         @Test
-        void deveLancarNotFoundQuandoAnexoNaoExiste() {
+        void shouldThrowNotFoundWhenFileDoesNotExist() {
             UUID attachmentId = UUID.randomUUID();
             SelectFilesRequestDTO request = new SelectFilesRequestDTO(List.of(attachmentId));
 
@@ -173,7 +173,7 @@ class AttachmentsServicesUnitTest {
         }
 
         @Test
-        void deveLancarStorageExceptionQuandoMinioFalhaAoGerarUrl() throws Exception {
+        void shouldThrowStorageExceptionQuandoMinioFailToGenerateUrl() throws Exception {
             UUID attachmentId = UUID.randomUUID();
             SelectFilesRequestDTO request = new SelectFilesRequestDTO(List.of(attachmentId));
             Attachment attachment = mock(Attachment.class);
@@ -195,7 +195,7 @@ class AttachmentsServicesUnitTest {
     class DeleteFilesById {
 
         @Test
-        void deveDeletarAnexosQuandoTodosPertencemANota() throws Exception {
+        void shouldDeleteFileWhenTheyBelongToNote() throws Exception {
             UUID attachmentId = UUID.randomUUID();
             SelectFilesRequestDTO request = new SelectFilesRequestDTO(List.of(attachmentId));
             Attachment attachment = mock(Attachment.class);
@@ -212,7 +212,7 @@ class AttachmentsServicesUnitTest {
         }
 
         @Test
-        void deveLancarNotFoundQuandoAlgumAnexoNaoPertenceANota() {
+        void shouldThrowNotFoundWhenFileDoesNotBelongToNote() {
             UUID attachmentId1 = UUID.randomUUID();
             UUID attachmentId2 = UUID.randomUUID();
             SelectFilesRequestDTO request = new SelectFilesRequestDTO(List.of(attachmentId1, attachmentId2));
@@ -228,7 +228,7 @@ class AttachmentsServicesUnitTest {
         }
 
         @Test
-        void naoDeveLancarExceptionQuandoMinioFalhaAoRemover() throws Exception {
+        void shouldNotThrowExceptionWhenMinioFailToRemove() throws Exception {
             UUID attachmentId = UUID.randomUUID();
             SelectFilesRequestDTO request = new SelectFilesRequestDTO(List.of(attachmentId));
             Attachment attachment = mock(Attachment.class);
@@ -251,7 +251,7 @@ class AttachmentsServicesUnitTest {
     class SaveProfilePicture {
 
         @Test
-        void deveSalvarNovaFotoERemoverAntigaDoMinioEDoCache() throws Exception {
+        void shouldSaveNewPictureAndRemoveOldOne() throws Exception {
             MultipartFile file = mockMultipartFile();
             when(user.getAvatarKey()).thenReturn("old-key");
 
@@ -266,7 +266,7 @@ class AttachmentsServicesUnitTest {
         }
 
         @Test
-        void naoDeveRemoverDoMinioQuandoNaoHaFotoAntiga() throws Exception {
+        void shouldNotRemoveFromMinioWhenOldPictureDoesNotExist() throws Exception {
             MultipartFile file = mockMultipartFile();
             when(user.getAvatarKey()).thenReturn(null);
 
@@ -283,7 +283,7 @@ class AttachmentsServicesUnitTest {
     class DownloadProfilePicture {
 
         @Test
-        void deveRetornarDoCacheQuandoDisponivel() {
+        void shouldReturnFromCacheWhenAvailable() {
             DownloadProfileResponseDTO cached = new DownloadProfileResponseDTO("http://cached-url");
             when(redisTemplate.opsForValue()).thenReturn(valueOperations);
             when(valueOperations.get("profile:" + userId)).thenReturn("cached-json");
@@ -296,7 +296,7 @@ class AttachmentsServicesUnitTest {
         }
 
         @Test
-        void deveBuscarNoMinioEPopularCacheQuandoNaoHaCache() throws Exception {
+        void shouldFindOnMinioAndPopulateCache() throws Exception {
             when(redisTemplate.opsForValue()).thenReturn(valueOperations);
             when(valueOperations.get("profile:" + userId)).thenReturn(null);
             when(user.getAvatarKey()).thenReturn("avatar-key");
@@ -313,7 +313,7 @@ class AttachmentsServicesUnitTest {
         }
 
         @Test
-        void deveSerializarObjetoCompletoNoCacheNaoApenasAUrl() throws Exception {
+        void shouldSerializeCompleteObjectOnCache() throws Exception {
             // BUG_ regressão: garante que o DTO inteiro é serializado, não apenas response.url()
             when(redisTemplate.opsForValue()).thenReturn(valueOperations);
             when(valueOperations.get("profile:" + userId)).thenReturn(null);
@@ -331,7 +331,7 @@ class AttachmentsServicesUnitTest {
         }
 
         @Test
-        void deveLancarNotFoundQuandoUsuarioNaoTemAvatarKey() {
+        void shouldThrowNotFoundWhenUserDoesNotHaveAvatarKey() {
             when(redisTemplate.opsForValue()).thenReturn(valueOperations);
             when(valueOperations.get("profile:" + userId)).thenReturn(null);
             when(user.getAvatarKey()).thenReturn(null);
@@ -343,7 +343,7 @@ class AttachmentsServicesUnitTest {
         }
 
         @Test
-        void deveLancarNotFoundQuandoMinioFalhaAoGerarUrl() throws Exception {
+        void shouldThrowNotFoundWhenMinioFailToGenerateUrl() throws Exception {
             when(redisTemplate.opsForValue()).thenReturn(valueOperations);
             when(valueOperations.get("profile:" + userId)).thenReturn(null);
             when(user.getAvatarKey()).thenReturn("avatar-key");
@@ -361,7 +361,7 @@ class AttachmentsServicesUnitTest {
     class RemoveProfilePicture {
 
         @Test
-        void deveRemoverDoMinioLimparAvatarKeyECache() throws Exception {
+        void shouldRemoveFromMinioAndCleanCache() throws Exception {
             User plainUser = new User();
             plainUser.setAvatarKey("existing-key");
             ReflectionTestUtils.setField(plainUser, "id", userId);
@@ -375,7 +375,7 @@ class AttachmentsServicesUnitTest {
         }
 
         @Test
-        void naoDeveChamarMinioQuandoUsuarioNaoTemAvatar() throws Exception {
+        void shouldNotCallMinioWhenUserDoesNotHaveProfilePicture() throws Exception {
             User plainUser = new User();
             plainUser.setAvatarKey(null);
             ReflectionTestUtils.setField(plainUser, "id", userId);
@@ -387,7 +387,7 @@ class AttachmentsServicesUnitTest {
         }
 
         @Test
-        void naoDeveLancarExceptionQuandoMinioFalhaAoRemover() throws Exception {
+        void shouldNotThrowExceptionWhenMinioFailToRemove() throws Exception {
             User plainUser = new User();
             plainUser.setAvatarKey("existing-key");
             ReflectionTestUtils.setField(plainUser, "id", userId);
