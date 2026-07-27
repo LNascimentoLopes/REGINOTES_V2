@@ -13,7 +13,6 @@ import LNASC.REGINOTES.Services.NotificationsService;
 import LNASC.REGINOTES.Services.WorkspaceService;
 import LNASC.REGINOTES.Util.Enums.WorkspaceRole;
 import LNASC.REGINOTES.Util.Mappers.WorkspaceMapper;
-import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -37,7 +36,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class WorkspaceServiceTest {
+class WorkspaceServicesUnitTest {
 
     @Mock private WorkspaceRepository repository;
     @Mock private WorkspaceMemberRepository memberRepository;

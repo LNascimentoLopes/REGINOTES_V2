@@ -35,7 +35,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class NoteServiceTest {
+class NoteServicesUnitTest {
 
     @Mock private NoteRepository repository;
     @Mock private NoteCollaboratorRepository noteCollabRepository;

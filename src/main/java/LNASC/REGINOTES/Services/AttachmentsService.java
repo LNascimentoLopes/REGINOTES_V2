@@ -144,6 +144,10 @@ public class AttachmentsService {
         User user = userDetails.getUser();
         String oldKey = user.getAvatarKey();
 
+        if (oldKey != null && !oldKey.isBlank()) {
+            removeFromMinio(oldKey, profileBucket);
+        }
+
         String newKey = getKey(request, profileBucket);
         user.setAvatarKey(newKey);
         userRepository.save(user);
@@ -151,9 +155,7 @@ public class AttachmentsService {
         String cacheKey = "profile:" +userDetails.getUserId();
         redisTemplate.delete(cacheKey);
 
-        if (oldKey != null && !oldKey.isBlank()) {
-            removeFromMinio(oldKey, profileBucket);
-        }
+
     }
 
     public DownloadProfileResponseDTO downloadProfilePicture(CustomUserDetails userDetails) {
