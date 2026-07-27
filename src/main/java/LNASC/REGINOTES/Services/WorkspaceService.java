@@ -71,7 +71,10 @@ public class WorkspaceService {
         }
 
         Workspace workspace = repository.findWorkspaceByIdAndUserId(id, userDetails.getUserId()).orElseThrow(() -> new NotFoundException("workspace not found"));
-        return mapper.entityToGetResponseDTO(workspace);
+        GetWorkspacesResponseDTO response = mapper.entityToGetResponseDTO(workspace);
+        redisTemplate.opsForValue().set(cacheKey,objMapper.writeValueAsString(mapper.entityToGetResponseDTO(workspace)));
+
+        return response;
     }
 
     @Transactional
@@ -125,10 +128,18 @@ public class WorkspaceService {
 
     @Transactional
     public void hardDeleteWorkspaceById(CustomUserDetails userDetails, UUID id){
-        int updated = repository.restoreByWorkspaceId(id, userDetails.getUserId());
-        if (updated == 0) {
-            throw new NotFoundException("Workspace Not Found");
+        WorkspaceMember member = memberRepository.findMemberByWorkspaceAndId(id,userDetails.getUserId())
+                .orElseThrow(()-> new NotFoundException("member not found"));
+
+        if (member.getRole().getLevel() == WorkspaceRole.OWNER.getLevel()){
+            int updated = repository.hardDeleteByWorkspaceId(id,userDetails.getUserId());
+            if (updated == 0) {
+                throw new NotFoundException("Workspace Not Found");
+            }
+        }else {
+            throw new ForbiddenException("Permission Insufficient");
         }
+
     }
 
     // Member Services ----------------------------------------------------------------------------------------------------------------------

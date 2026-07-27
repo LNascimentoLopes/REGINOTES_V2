@@ -34,7 +34,6 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 
@@ -90,7 +89,7 @@ class UserServicesUnitTest {
     class GetUserInfo {
 
         @Test
-        void deveRetornarDadosDoUsuarioMapeados() {
+        void shouldReturnMappedUserData() {
             // Arrange
             GetUserResponseDTO expectedResponse = new GetUserResponseDTO(
                     userId, "Nome Atual", "atual@example.com"
@@ -115,7 +114,7 @@ class UserServicesUnitTest {
     class DeactivateAccount {
 
         @Test
-        void deveChamarRepositoryComIdDoUsuarioAutenticado() {
+        void shouldCallRepositoryWithAuthenticatedUserId() {
             // Arrange
             when(userDetails.getUser()).thenReturn(user);
 
@@ -140,7 +139,7 @@ class UserServicesUnitTest {
         }
 
         @Test
-        void deveLancarExceptionQuandoUsuarioNaoEncontrado() {
+        void shouldThrowNotFoundWhenUserDoesNotExist() {
             // Arrange
             when(userDetails.getUserId()).thenReturn(userId);
             when(repository.findById(userId)).thenReturn(Optional.empty());
@@ -157,7 +156,7 @@ class UserServicesUnitTest {
         }
 
         @Test
-        void deveAtualizarApenasNomeQuandoEmailNaoInformado() {
+        void shouldUpdateOnlyNameWhenEmailNotInformed() {
             // Arrange
             when(userDetails.getUserId()).thenReturn(userId);
             when(repository.findById(userId)).thenReturn(Optional.of(user));
@@ -180,7 +179,7 @@ class UserServicesUnitTest {
         }
 
         @Test
-        void deveLancarExceptionQuandoNovoEmailJaEstaEmUso() {
+        void shouldThrowConflictWhenUserAlreadyExists() {
             // Arrange
             when(userDetails.getUserId()).thenReturn(userId);
             when(repository.findById(userId)).thenReturn(Optional.of(user));
@@ -202,7 +201,7 @@ class UserServicesUnitTest {
         }
 
         @Test
-        void deveTrocarEmailBlacklistarTokenERevogarRefreshTokenQuandoEmailValido() {
+        void shouldUpdateEmailAndBlacklistAllCurrentRefreshTokens() {
             // Arrange
             when(userDetails.getUserId()).thenReturn(userId);
             when(repository.findById(userId)).thenReturn(Optional.of(user));
@@ -248,7 +247,7 @@ class UserServicesUnitTest {
     class UpdateUserPassword {
 
         @Test
-        void deveLancarExceptionQuandoUsuarioNaoEncontrado() {
+        void ShoutThrowNotFoundWhenUserDoesNotExist() {
             // Arrange
             when(userDetails.getUserId()).thenReturn(userId);
             when(repository.findById(userId)).thenReturn(Optional.empty());
@@ -262,7 +261,7 @@ class UserServicesUnitTest {
         }
 
         @Test
-        void deveAtualizarSenhaQuandoSenhaAntigaEstaCorreta() {
+        void shouldUpdatePasswordWhenOldPasswordMatch() {
             // Arrange
             when(userDetails.getUserId()).thenReturn(userId);
             when(repository.findById(userId)).thenReturn(Optional.of(user));
@@ -279,7 +278,7 @@ class UserServicesUnitTest {
         }
 
         @Test
-        void naoDeveAlterarSenhaQuandoSenhaAntigaEstaIncorreta() {
+        void shouldNotUpdatePasswordWhenOldPasswordIsWrong() {
             // Arrange
             when(userDetails.getUserId()).thenReturn(userId);
             when(repository.findById(userId)).thenReturn(Optional.of(user));

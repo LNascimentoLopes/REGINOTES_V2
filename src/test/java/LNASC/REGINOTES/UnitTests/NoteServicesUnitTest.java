@@ -11,7 +11,6 @@ import LNASC.REGINOTES.Services.NotificationsService;
 import LNASC.REGINOTES.Util.Enums.NoteRole;
 import LNASC.REGINOTES.Util.Enums.WorkspaceRole;
 import LNASC.REGINOTES.Util.Mappers.NoteMapper;
-import LNASC.REGINOTES.Util.Mappers.TagMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -35,33 +34,17 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
-/**
- * Exemplo de suíte de testes unitários para NoteService.
- *
- * Mesma estrutura usada no UserServiceTest: MockitoExtension, @Mock para cada
- * dependência, @InjectMocks para instanciar o NoteService "de verdade" com os
- * mocks injetados, e @Nested para agrupar os testes por método.
- *
- * IMPORTANTE — ajustes que você provavelmente vai precisar fazer:
- *  - CreateNoteRequestDTO segue a ordem real: (title, content, parentId, workspaceId)
- *  - content é do tipo JsonNode (tools.jackson.databind.JsonNode), não String —
- *    use o helper sampleContent() abaixo em vez de passar uma String ou null.
- *  - Assumi getters/setters padrão nas entidades (Note, WorkspaceMember,
- *    NoteCollaborator, Workspace). Ajuste nomes se divergirem.
- */
 @ExtendWith(MockitoExtension.class)
 class NoteServiceTest {
 
     @Mock private NoteRepository repository;
     @Mock private NoteCollaboratorRepository noteCollabRepository;
     @Mock private NoteMapper mapper;
-    @Mock private NoteVersionRepository versionRepository;
     @Mock private NotificationsService notificationsService;
     @Mock private WorkspaceMemberRepository memberRepository;
     @Mock private RedisTemplate<String, String> redisTemplate;
     @Mock private ValueOperations<String, String> valueOperations;
     @Mock private ObjectMapper objMapper;
-    @Mock private TagMapper tagMapper;
 
     @InjectMocks
     private NoteService noteService;
@@ -80,25 +63,17 @@ class NoteServiceTest {
         note = new Note();
         note.setId(noteId);
     }
-
-    /**
-     * Gera um JsonNode válido (não-nulo) para popular o campo `content` dos DTOs
-     * de nota nos testes. O campo não é Optional e não aceita null, então nunca
-     * passe uma String nem null diretamente nos construtores dos DTOs.
-     */
     private JsonNode sampleContent() {
         return JsonNodeFactory.instance.objectNode().put("text", "conteúdo de teste");
     }
 
-    // -----------------------------------------------------------------------------------------------
-    // createNote
-    // -----------------------------------------------------------------------------------------------
+    // createNote ------------------------------------------------------------------------------------------------------
 
     @Nested
     class CreateNote {
 
         @Test
-        void deveLancarForbiddenQuandoNivelInsuficienteNoWorkspace() {
+        void shouldThrowForbiddenWhenRoleInsufficientOnWorkspace() {
             // Arrange
             UUID workspaceId = UUID.randomUUID();
             CreateNoteRequestDTO request = new CreateNoteRequestDTO(
@@ -122,7 +97,7 @@ class NoteServiceTest {
         }
 
         @Test
-        void deveCriarNotaOrfaQuandoNaoInformaWorkspace() {
+        void shouldCreateOrphanNoteWhenWorkspaceIsNotInformed() {
             // Arrange
             CreateNoteRequestDTO request = new CreateNoteRequestDTO(
                     "Título", sampleContent(), Optional.empty(), Optional.empty()
@@ -142,7 +117,7 @@ class NoteServiceTest {
         }
 
         @Test
-        void deveLancarNotFoundQuandoParentNoteNaoExiste() {
+        void shouldThrowNotFoundWhenParentDoeNotExist() {
             // Arrange
             UUID parentId = UUID.randomUUID();
             CreateNoteRequestDTO request = new CreateNoteRequestDTO(
@@ -158,9 +133,7 @@ class NoteServiceTest {
         }
     }
 
-    // -----------------------------------------------------------------------------------------------
-    // updateNote
-    // -----------------------------------------------------------------------------------------------
+    // updateNote ------------------------------------------------------------------------------------------------------
 
     @Nested
     class UpdateNote {
@@ -169,14 +142,11 @@ class NoteServiceTest {
 
         @BeforeEach
         void setUpRequest() {
-            // ATENÇÃO: assumindo a mesma ordem/tipagem de CreateNoteRequestDTO
-            // (title, content como JsonNode). Ajuste se UpdateNoteRequestDTO
-            // tiver campos ou ordem diferentes (ex: se for Optional<String> title).
             request = new UpdateNoteRequestDTO(Optional.of("Novo título"), Optional.of(sampleContent()),Optional.of(Boolean.FALSE));
         }
 
         @Test
-        void deveLancarNotFoundQuandoNotaNaoExiste() {
+        void shouldThrowNotFoundWhenNoteDoesNotExist() {
             // Arrange
             when(repository.findNoteById(noteId)).thenReturn(Optional.empty());
 
@@ -187,7 +157,7 @@ class NoteServiceTest {
         }
 
         @Test
-        void deveLancarForbiddenQuandoViewerTentaEditarNotaDeWorkspace() {
+        void shouldThrowForbiddenWhenViewerTryEditingNoteOnWorkspace() {
             // Arrange
             Workspace workspace = new Workspace();
             workspace.setId(UUID.randomUUID());
@@ -210,7 +180,7 @@ class NoteServiceTest {
         }
 
         @Test
-        void deveAtualizarNotificarTodosOsMembrosEInvalidarCacheQuandoNotaDeWorkspace() {
+        void shouldUpdateAndNotifyAllMembersAndInvalidateCacheOnWorkspaceNote() {
             // Arrange
             Workspace workspace = new Workspace();
             workspace.setId(UUID.randomUUID());
@@ -243,16 +213,14 @@ class NoteServiceTest {
 
             // Assert
             verify(repository).save(updatedNote);
-            // Confirma que TODOS os membros do workspace foram notificados,
-            // com a versão JÁ ATUALIZADA da nota (não a antiga)
             verify(notificationsService).notifyNoteUpdate(guest1, updatedNote);
             verify(notificationsService).notifyNoteUpdate(guest2, updatedNote);
             verify(redisTemplate).delete("notes:collab:" + noteId + ":" + workspace.getId());
         }
 
         @Test
-        void deveLancarForbiddenQuandoNaoEhColaboradorDaNotaOrfa() {
-            // Arrange — nota sem workspace, mas com mais de 1 colaborador (é "colaborativa")
+        void shouldThrowForbiddenWhenIsNotOrphanNoteCollaborator() {
+            // Arrange
             NoteCollaborator owner = new NoteCollaborator();
             note.setCollaborators(List.of(owner, new NoteCollaborator()));
 
@@ -268,8 +236,8 @@ class NoteServiceTest {
         }
 
         @Test
-        void deveAtualizarNotaOrfaSimplesSemNotificarNinguem() {
-            // Arrange — nota sem workspace e com no máximo 1 "colaborador" (o próprio owner)
+        void shouldUpdateOrphanNoteWithoutNotifying() {
+            // Arrange
             note.setCollaborators(List.of());
 
             Note updatedNote = new Note();
@@ -288,15 +256,13 @@ class NoteServiceTest {
         }
     }
 
-    // -----------------------------------------------------------------------------------------------
-    // softDeleteNote
-    // -----------------------------------------------------------------------------------------------
+    // softDeleteNote --------------------------------------------------------------------------------------------------
 
     @Nested
     class SoftDeleteNote {
 
         @Test
-        void deveLancarNotFoundQuandoNotaNaoExiste() {
+        void shouldThrowNotFoundWhenNotDoesNotExist() {
             when(repository.findNoteById(noteId)).thenReturn(Optional.empty());
 
             assertThrows(NotFoundException.class, () ->
@@ -305,7 +271,7 @@ class NoteServiceTest {
         }
 
         @Test
-        void donoNaoConsegueDeletarNotaColaborativaOrfa() {
+        void ownerCanNotDeleteOrphanCollaborativeNote() {
             // Arrange
             NoteCollaborator ownerCollaborator = new NoteCollaborator();
             ownerCollaborator.setRole(NoteRole.OWNER);
@@ -324,7 +290,7 @@ class NoteServiceTest {
         }
 
         @Test
-        void deveSoftDeletarNotaOrfaSimples() {
+        void shouldSoftDeleteSimpleOrphanNote() {
             // Arrange
             when(repository.findNoteById(noteId)).thenReturn(Optional.of(note));
             when(userDetails.getUserId()).thenReturn(userId);
@@ -338,19 +304,17 @@ class NoteServiceTest {
         }
     }
 
-    // -----------------------------------------------------------------------------------------------
-    // getOrphanNoteById — cobre o comportamento de cache (hit e miss)
-    // -----------------------------------------------------------------------------------------------
+    // getOrphanNoteById -----------------------------------------------------------------------------------------------
 
     @Nested
     class GetOrphanNoteById {
 
         @Test
-        void deveRetornarDoCacheQuandoDisponivel() throws Exception {
+        void shouldReturnFromCacheWhenAvailable() {
             // Arrange
             String cacheKey = "notes:orphan:" + userId + ":" + noteId;
             String cachedJson = "{\"id\":\"" + noteId + "\"}";
-            // Se GetNoteResponseDTO.content também for JsonNode, troque "conteúdo" por sampleContent()
+
             GetNoteResponseDTO cachedResponse = new GetNoteResponseDTO(noteId, "Título", "conteúdo",Boolean.FALSE, Instant.now(),Instant.now(),userId);
 
             when(userDetails.getUserId()).thenReturn(userId);
@@ -363,15 +327,14 @@ class NoteServiceTest {
 
             // Assert
             assertThat(result).isEqualTo(cachedResponse);
-            // Como veio do cache, o banco NUNCA deveria ter sido consultado
             verify(repository, never()).findNoteByIdAndOwner(any(), any());
         }
 
         @Test
-        void deveBuscarNoBancoEPopularCacheQuandoCacheVazio() {
+        void shouldSearchOnDatabaseWhenCacheUnavailable() {
             // Arrange
             String cacheKey = "notes:orphan:" + userId + ":" + noteId;
-            GetNoteResponseDTO response = new GetNoteResponseDTO(noteId, "Título", "conteúdo",Boolean.FALSE, Instant.now(),Instant.now(),userId);
+            GetNoteResponseDTO response = new GetNoteResponseDTO(noteId, "Title", "content",Boolean.FALSE, Instant.now(),Instant.now(),userId);
 
             when(userDetails.getUserId()).thenReturn(userId);
             when(redisTemplate.opsForValue()).thenReturn(valueOperations);
@@ -389,7 +352,7 @@ class NoteServiceTest {
         }
 
         @Test
-        void deveLancarNotFoundQuandoNotaNaoExisteENaoEstaEmCache() {
+        void shouldThrowNotFoundWhenNoteDoesNotExistAndCacheUnavailable() {
             // Arrange
             String cacheKey = "notes:orphan:" + userId + ":" + noteId;
 
@@ -405,15 +368,13 @@ class NoteServiceTest {
         }
     }
 
-    // -----------------------------------------------------------------------------------------------
-    // addCollaboratorByInvite
-    // -----------------------------------------------------------------------------------------------
+    // addCollaboratorByInvite -----------------------------------------------------------------------------------------
 
     @Nested
     class AddCollaboratorByInvite {
 
         @Test
-        void deveLancarNotFoundQuandoConviteNaoExisteOuExpirou() {
+        void shouldThrowNotFoundWhenInviteExpiredOrDoesNotExist() {
             // Arrange
             UUID inviteId = UUID.randomUUID();
             when(userDetails.getUserId()).thenReturn(userId);
@@ -429,7 +390,7 @@ class NoteServiceTest {
         }
 
         @Test
-        void deveAdicionarColaboradorENotificarExistentesQuandoConviteValido() {
+        void shouldAddCollaboratorAndNotifyMembersWhenInviteIsValid() {
             // Arrange
             UUID inviteId = UUID.randomUUID();
             String inviteCacheKey = "invite:" + inviteId + ":" + userId;
@@ -461,15 +422,13 @@ class NoteServiceTest {
         }
     }
 
-    // -----------------------------------------------------------------------------------------------
-    // removeCollaborator
-    // -----------------------------------------------------------------------------------------------
+    // removeCollaborator ----------------------------------------------------------------------------------------------
 
     @Nested
     class RemoveCollaborator {
 
         @Test
-        void deveRemoverQuandoDeleterTemNivelMaiorQueOAlvo() {
+        void shouldRemoverWhenDeleterHasHigherLevelThanTarget() {
             // Arrange
             UUID targetId = UUID.randomUUID();
 
@@ -490,7 +449,7 @@ class NoteServiceTest {
         }
 
         @Test
-        void deveLancarForbiddenQuandoDeleterTemNivelMenorOuIgualAoAlvo() {
+        void shouldThrowForbiddenWhenDeleterHasLowerLevelThanTarget() {
             // Arrange
             UUID targetId = UUID.randomUUID();
 
@@ -512,15 +471,12 @@ class NoteServiceTest {
         }
     }
 
-    // -----------------------------------------------------------------------------------------------
-    // validateNoteAccess — método utilitário usado por várias operações de versão
-    // -----------------------------------------------------------------------------------------------
-
+    // validateNoteAccess ----------------------------------------------------------------------------------------------
     @Nested
     class ValidateNoteAccess {
 
         @Test
-        void devePermitirQuandoMembroDoWorkspaceTemNivelSuficiente() {
+        void shouldPermitWhenWorkspaceMemberHasEnoughLevel() {
             // Arrange
             Workspace workspace = new Workspace();
             workspace.setId(UUID.randomUUID());
@@ -537,7 +493,7 @@ class NoteServiceTest {
         }
 
         @Test
-        void deveLancarForbiddenQuandoNivelInsuficienteNoWorkspace() {
+        void shouldThrowForbiddenWhenLevelIsInsufficientOnWorkspace() {
             // Arrange
             Workspace workspace = new Workspace();
             workspace.setId(UUID.randomUUID());
@@ -556,7 +512,7 @@ class NoteServiceTest {
         }
 
         @Test
-        void deveLancarForbiddenQuandoUsuarioNaoEhColaboradorDeNotaSemWorkspace() {
+        void shouldThrowForbiddenWhenUserIsNotCollaboratorOfAnOrphanNote() {
             // Arrange — note.getWorkspaceNote() é null, então cai no ramo de colaborador
             when(noteCollabRepository.findCollabByUserId(userId, noteId))
                     .thenReturn(Optional.empty());
